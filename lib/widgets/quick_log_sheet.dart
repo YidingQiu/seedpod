@@ -7,6 +7,7 @@ import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/log_entry.dart';
+import 'package:seedpod/models/module_prefs.dart';
 import 'package:seedpod/providers/app_state.dart';
 
 class QuickLogSheet extends StatefulWidget {
@@ -31,6 +32,24 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
   DateTime? _sleepStart;
   DateTime? _sleepEnd;
 
+  // Nappy fields
+  String _nappyType = 'Wet';
+
+  // Medication fields
+  final _medicationNameCtrl = TextEditingController();
+  final _doseCtrl = TextEditingController();
+
+  // Food fields
+  final _foodNameCtrl = TextEditingController();
+  String _foodReaction = 'None';
+
+  // Teeth fields
+  final _toothCtrl = TextEditingController();
+
+  // Appointment fields
+  String _appointmentType = 'GP';
+  final _doctorCtrl = TextEditingController();
+
   // Feeding fields
   String _feedingType = 'Breast';
   String _breastSide = 'Left';
@@ -43,19 +62,33 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
     _noteController.dispose();
     _weightController.dispose();
     _heightController.dispose();
+    _medicationNameCtrl.dispose();
+    _doseCtrl.dispose();
+    _foodNameCtrl.dispose();
+    _toothCtrl.dispose();
+    _doctorCtrl.dispose();
     _feedingAmountController.dispose();
     _feedingDurationController.dispose();
     super.dispose();
   }
 
-  static const List<_LogTypeOption> _typeOptions = [
-    _LogTypeOption(LogType.growth, Icons.straighten, 'Growth'),
-    _LogTypeOption(LogType.sleep, Icons.bedtime, 'Sleep'),
-    _LogTypeOption(LogType.feeding, Icons.local_cafe, 'Feeding'),
-    _LogTypeOption(LogType.milestone, Icons.star, 'Milestone'),
-    _LogTypeOption(LogType.health, Icons.favorite, 'Health'),
-    _LogTypeOption(LogType.environment, Icons.wb_sunny, 'Weather'),
-    _LogTypeOption(LogType.note, Icons.edit_note, 'Note'),
+  static const List<_LogTypeOption> _allTypeOptions = [
+    // Core
+    _LogTypeOption(LogType.growth, Icons.straighten, 'Growth', 'growth'),
+    _LogTypeOption(LogType.sleep, Icons.bedtime, 'Sleep', 'sleep'),
+    _LogTypeOption(LogType.feeding, Icons.local_cafe, 'Feeding', 'feeding'),
+    _LogTypeOption(LogType.milestone, Icons.star, 'Milestone', 'milestone'),
+    // Optional
+    _LogTypeOption(LogType.nappy, Icons.baby_changing_station, 'Nappy', 'nappy'),
+    _LogTypeOption(LogType.food, Icons.restaurant, 'Food', 'food'),
+    _LogTypeOption(LogType.medication, Icons.medication, 'Meds', 'medication'),
+    _LogTypeOption(LogType.appointment, Icons.local_hospital, 'Doctor', 'appointment'),
+    _LogTypeOption(LogType.health, Icons.favorite, 'Health', 'health'),
+    _LogTypeOption(LogType.teeth, Icons.mood, 'Teeth', 'teeth'),
+    _LogTypeOption(LogType.memory, Icons.auto_stories, 'Memory', 'memory'),
+    _LogTypeOption(LogType.sleep_training, Icons.nightlight, 'Sleep Trng', 'sleep_training'),
+    _LogTypeOption(LogType.environment, Icons.wb_sunny, 'Weather', 'environment'),
+    _LogTypeOption(LogType.note, Icons.edit_note, 'Note', 'milestone'),
   ];
 
   Future<void> _save() async {
@@ -157,11 +190,48 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
           'title': _titleController.text.trim(),
           'note': _noteController.text.trim(),
         };
+      case LogType.nappy:
+        return {
+          'type': _nappyType,
+          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+        };
+      case LogType.medication:
+        return {
+          'name': _medicationNameCtrl.text.trim(),
+          if (_doseCtrl.text.trim().isNotEmpty) 'dose': _doseCtrl.text.trim(),
+          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+        };
+      case LogType.food:
+        return {
+          'name': _foodNameCtrl.text.trim(),
+          'reaction': _foodReaction,
+          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+        };
+      case LogType.teeth:
+        return {
+          if (_toothCtrl.text.trim().isNotEmpty) 'tooth': _toothCtrl.text.trim(),
+          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+        };
+      case LogType.memory:
+        return {
+          if (_titleController.text.trim().isNotEmpty) 'title': _titleController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+        };
+      case LogType.appointment:
+        return {
+          'type': _appointmentType,
+          if (_doctorCtrl.text.trim().isNotEmpty) 'doctor': _doctorCtrl.text.trim(),
+          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+        };
+      case LogType.sleep_training:
+        return {
+          if (_titleController.text.trim().isNotEmpty) 'method': _titleController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+        };
       default:
         return {
-          if (_titleController.text.trim().isNotEmpty)
-            'title': _titleController.text.trim(),
-          'note': _noteController.text.trim(),
+          if (_titleController.text.trim().isNotEmpty) 'title': _titleController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
         };
     }
   }
@@ -240,6 +310,10 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
   }
 
   Widget _buildTypeGrid() {
+    final prefs = context.read<AppState>().modulePrefs;
+    final visible = _allTypeOptions
+        .where((o) => prefs.isEnabled(o.moduleId))
+        .toList();
     return GridView.count(
       crossAxisCount: 4,
       shrinkWrap: true,
@@ -247,7 +321,7 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       children: [
-        for (final opt in _typeOptions)
+        for (final opt in visible)
           _TypeTile(
             option: opt,
             selected: _selectedType == opt.type,
@@ -409,6 +483,168 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             _noteField(),
           ],
         );
+      case LogType.nappy:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Nappy type'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final t in ['Wet', 'Dirty', 'Both', 'Dry'])
+                  ChoiceChip(
+                    label: Text(t),
+                    selected: _nappyType == t,
+                    selectedColor: colorPrimary.withOpacity(0.15),
+                    onSelected: (s) { if (s) setState(() => _nappyType = t); },
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _noteField(),
+          ],
+        );
+      case LogType.medication:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Medication name'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _medicationNameCtrl,
+              decoration: const InputDecoration(hintText: 'e.g. Panadol, Vitamin D'),
+            ),
+            const SizedBox(height: 16),
+            _label('Dose (optional)'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _doseCtrl,
+              decoration: const InputDecoration(hintText: 'e.g. 2.5 ml'),
+            ),
+            const SizedBox(height: 16),
+            _noteField(),
+          ],
+        );
+      case LogType.food:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Food introduced'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _foodNameCtrl,
+              decoration: const InputDecoration(hintText: 'e.g. Pureed pumpkin'),
+            ),
+            const SizedBox(height: 16),
+            _label('Reaction'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final r in ['None', 'Mild', 'Severe'])
+                  ChoiceChip(
+                    label: Text(r),
+                    selected: _foodReaction == r,
+                    selectedColor: r == 'Severe'
+                        ? Colors.red.withOpacity(0.2)
+                        : r == 'Mild'
+                            ? Colors.orange.withOpacity(0.2)
+                            : colorPrimary.withOpacity(0.15),
+                    onSelected: (s) { if (s) setState(() => _foodReaction = r); },
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _noteField(),
+          ],
+        );
+      case LogType.teeth:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Which tooth?'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _toothCtrl,
+              decoration: const InputDecoration(hintText: 'e.g. Bottom front left'),
+            ),
+            const SizedBox(height: 16),
+            _noteField(),
+          ],
+        );
+      case LogType.memory:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Title'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _titleController,
+              decoration: const InputDecoration(hintText: 'e.g. First laugh'),
+            ),
+            const SizedBox(height: 16),
+            _noteField(),
+          ],
+        );
+      case LogType.appointment:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Appointment type'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final t in ['GP', 'Paediatrician', 'Specialist', 'Dentist', 'Emergency'])
+                  ChoiceChip(
+                    label: Text(t),
+                    selected: _appointmentType == t,
+                    selectedColor: colorPrimary.withOpacity(0.15),
+                    onSelected: (s) { if (s) setState(() => _appointmentType = t); },
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _label('Doctor / clinic (optional)'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _doctorCtrl,
+              decoration: const InputDecoration(hintText: 'e.g. Dr. Smith, Calvary'),
+            ),
+            const SizedBox(height: 16),
+            _noteField(),
+          ],
+        );
+      case LogType.health:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Symptom / condition'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _titleController,
+              decoration: const InputDecoration(hintText: 'e.g. Fever 38.5°C, runny nose'),
+            ),
+            const SizedBox(height: 16),
+            _noteField(),
+          ],
+        );
+      case LogType.sleep_training:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label('Method'),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _titleController,
+              decoration: const InputDecoration(hintText: 'e.g. Ferber, extinction, chair'),
+            ),
+            const SizedBox(height: 16),
+            _noteField(),
+          ],
+        );
       default:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,8 +729,9 @@ class _LogTypeOption {
   final LogType type;
   final IconData icon;
   final String label;
+  final String moduleId;
 
-  const _LogTypeOption(this.type, this.icon, this.label);
+  const _LogTypeOption(this.type, this.icon, this.label, this.moduleId);
 }
 
 class _TypeTile extends StatelessWidget {

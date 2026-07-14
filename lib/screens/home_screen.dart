@@ -31,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initLoad() async {
     final state = context.read<AppState>();
+    await state.loadModulePrefs();
     if (state.profileState == LoadState.idle) {
       await state.loadProfile();
     }
@@ -323,6 +324,13 @@ class _LogCard extends StatelessWidget {
     LogType.photo: Icons.photo_camera,
     LogType.environment: Icons.wb_sunny,
     LogType.note: Icons.edit_note,
+    LogType.nappy: Icons.baby_changing_station,
+    LogType.medication: Icons.medication,
+    LogType.food: Icons.restaurant,
+    LogType.teeth: Icons.mood,
+    LogType.memory: Icons.auto_stories,
+    LogType.appointment: Icons.local_hospital,
+    LogType.sleep_training: Icons.nightlight,
   };
 
   @override
@@ -406,6 +414,27 @@ class _LogCard extends StatelessWidget {
         return '$t feeding';
       case LogType.milestone:
         return e.data['title']?.toString() ?? 'Milestone';
+      case LogType.nappy:
+        return 'Nappy — ${e.data['type'] ?? 'change'}';
+      case LogType.medication:
+        final name = e.data['name']?.toString() ?? 'Medication';
+        final dose = e.data['dose']?.toString();
+        return dose != null ? '$name — $dose' : name;
+      case LogType.food:
+        final food = e.data['name']?.toString() ?? 'Food';
+        final reaction = e.data['reaction']?.toString();
+        if (reaction != null && reaction != 'None') return '$food (reaction: $reaction)';
+        return 'First food: $food';
+      case LogType.teeth:
+        return e.data['tooth']?.toString() ?? 'Tooth eruption';
+      case LogType.memory:
+        return e.data['title']?.toString() ?? 'Memory';
+      case LogType.appointment:
+        final type = e.data['type']?.toString() ?? 'Appointment';
+        final doc = e.data['doctor']?.toString();
+        return doc != null ? '$type — $doc' : type;
+      case LogType.sleep_training:
+        return e.data['method']?.toString() ?? 'Sleep training';
       default:
         return e.data['title']?.toString() ?? e.type.label;
     }

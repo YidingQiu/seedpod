@@ -11,6 +11,13 @@ enum LogType {
   photo,
   environment,
   note,
+  nappy,
+  medication,
+  food,
+  teeth,
+  memory,
+  appointment,
+  sleep_training,
 }
 
 extension LogTypeLabel on LogType {
@@ -32,6 +39,20 @@ extension LogTypeLabel on LogType {
         return 'Environment';
       case LogType.note:
         return 'Note';
+      case LogType.nappy:
+        return 'Nappy';
+      case LogType.medication:
+        return 'Medication';
+      case LogType.food:
+        return 'Food';
+      case LogType.teeth:
+        return 'Teeth';
+      case LogType.memory:
+        return 'Memory';
+      case LogType.appointment:
+        return 'Doctor';
+      case LogType.sleep_training:
+        return 'Sleep Training';
     }
   }
 
@@ -53,6 +74,20 @@ extension LogTypeLabel on LogType {
         return 'wb_sunny';
       case LogType.note:
         return 'edit_note';
+      case LogType.nappy:
+        return 'baby_changing_station';
+      case LogType.medication:
+        return 'medication';
+      case LogType.food:
+        return 'restaurant';
+      case LogType.teeth:
+        return 'mood';
+      case LogType.memory:
+        return 'auto_stories';
+      case LogType.appointment:
+        return 'local_hospital';
+      case LogType.sleep_training:
+        return 'nightlight';
     }
   }
 }

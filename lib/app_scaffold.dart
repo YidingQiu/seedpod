@@ -1,12 +1,16 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/constants/app.dart';
+import 'package:seedpod/providers/app_state.dart';
+import 'package:seedpod/screens/childcare_screen.dart';
 import 'package:seedpod/screens/health_screen.dart';
 import 'package:seedpod/screens/home_screen.dart';
+import 'package:seedpod/screens/modules_screen.dart';
 import 'package:seedpod/screens/share_screen.dart';
 import 'package:seedpod/screens/timeline_screen.dart';
 
@@ -19,61 +23,90 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SolidScaffold(
-      controller: _scaffoldController,
-      hideNavRail: false,
-      enableProfile: true,
-      onLogout: (context) => SolidAuthHandler.instance.handleLogout(context),
-      menu: const [
-        SolidMenuItem(
-          icon: Icons.home_outlined,
-          title: 'Home',
-          tooltip: '''
+    final modulePrefs = context.watch<AppState>().modulePrefs;
+
+    final menu = [
+      const SolidMenuItem(
+        icon: Icons.home_outlined,
+        title: 'Home',
+        tooltip: '''
 
             **Home**
 
             Your baby\'s dashboard with quick log access and today\'s summary.
 
             ''',
-          child: HomeScreen(),
-        ),
-        SolidMenuItem(
-          icon: Icons.timeline,
-          title: 'Timeline',
-          tooltip: '''
+        child: HomeScreen(),
+      ),
+      const SolidMenuItem(
+        icon: Icons.timeline,
+        title: 'Timeline',
+        tooltip: '''
 
             **Timeline**
 
             All log entries in chronological order.
 
             ''',
-          child: TimelineScreen(),
-        ),
-        SolidMenuItem(
-          icon: Icons.favorite_outline,
-          title: 'Health',
-          tooltip: '''
+        child: TimelineScreen(),
+      ),
+      const SolidMenuItem(
+        icon: Icons.favorite_outline,
+        title: 'Health',
+        tooltip: '''
 
             **Health Records**
 
             Growth charts, vaccine schedule, and feeding log.
 
             ''',
-          child: HealthScreen(),
-        ),
-        SolidMenuItem(
-          icon: Icons.people_outline,
-          title: 'Share',
+        child: HealthScreen(),
+      ),
+      if (modulePrefs.isEnabled('childcare'))
+        const SolidMenuItem(
+          icon: Icons.school_outlined,
+          title: 'Childcare',
           tooltip: '''
+
+            **Childcare & Schools**
+
+            Waitlist tracker for childcare centres and schools.
+
+            ''',
+          child: ChildcareScreen(),
+        ),
+      const SolidMenuItem(
+        icon: Icons.extension_outlined,
+        title: 'Modules',
+        tooltip: '''
+
+            **Modules**
+
+            Enable or disable optional tracking features.
+
+            ''',
+        child: ModulesScreen(),
+      ),
+      const SolidMenuItem(
+        icon: Icons.people_outline,
+        title: 'Share',
+        tooltip: '''
 
             **Share Access**
 
             Grant family and caregivers access to your baby\'s POD data.
 
             ''',
-          child: ShareScreen(),
-        ),
-      ],
+        child: ShareScreen(),
+      ),
+    ];
+
+    return SolidScaffold(
+      controller: _scaffoldController,
+      hideNavRail: false,
+      enableProfile: true,
+      onLogout: (context) => SolidAuthHandler.instance.handleLogout(context),
+      menu: menu,
       appBar: SolidAppBarConfig(
         title: 'SeedPod',
         versionConfig: const SolidVersionConfig(

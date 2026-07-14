@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:solidpod/solidpod.dart';
 
 import 'package:seedpod/models/baby_profile.dart';
+import 'package:seedpod/models/childcare_entry.dart';
 import 'package:seedpod/models/log_entry.dart';
 
 class PodService {
@@ -70,6 +71,33 @@ class PodService {
       return true;
     } catch (e) {
       debugPrint('writeLogEntry error: $e');
+      return false;
+    }
+  }
+
+  Future<List<ChildcareEntry>> readChildcareEntries() async {
+    try {
+      final content = await readPod(ChildcareEntry.fileName);
+      return ChildcareEntry.listFromJsonString(content);
+    } on ResourceNotExistException {
+      return [];
+    } catch (e) {
+      debugPrint('readChildcareEntries error: $e');
+      return [];
+    }
+  }
+
+  Future<bool> writeChildcareEntries(List<ChildcareEntry> entries) async {
+    try {
+      await writePod(
+        ChildcareEntry.fileName,
+        ChildcareEntry.listToJsonString(entries),
+        encrypted: true,
+        overwrite: true,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('writeChildcareEntries error: $e');
       return false;
     }
   }

@@ -1,60 +1,39 @@
-/// Seedpod - orchestrate the primary login widget.
-///
-/// This file was generated from the `solidui` app template
-/// (`dart run solidui:create`). Edit it freely to suit your app.
-
 library;
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/app_scaffold.dart';
 import 'package:seedpod/constants/app.dart';
-
-// This widget is the root of the application. On startup it calls upon
-// [SolidLogin] to connect to the user's Pod stored within their data vault on
-// their chosen Solid server.
+import 'package:seedpod/constants/theme.dart' as app_theme;
+import 'package:seedpod/providers/app_state.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SolidThemeApp(
-      // We can manually turn off the debug banner. It is turned off
-      // automatically for a `flutter --release`.
-
-      debugShowCheckedModeBanner: false,
-
-      title: appTitle,
-
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF007AFF),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+      ],
+      child: SolidThemeApp(
+        debugShowCheckedModeBanner: false,
+        title: appTitle,
+        theme: app_theme.buildAppTheme(),
+        home: SolidLogin(
+          title: 'SeedPod\nBaby Tracker',
+          image: const AssetImage('assets/images/app_image.jpg'),
+          logo: const AssetImage('assets/images/app_icon.png'),
+          appDirectory: appPodDirectory,
+          link: appLink,
+          clientId: appClientId,
+          redirectUris: appRedirectUris,
+          postLogoutRedirectUris: appPostLogoutRedirectUris,
+          child: appScaffold,
         ),
-        useMaterial3: true,
-      ),
-
-      home: SolidLogin(
-        title: appTitle.replaceAll(' - ', '\n'),
-        image: const AssetImage('assets/images/app_image.jpg'),
-        logo: const AssetImage('assets/images/app_icon.png'),
-
-        // The application folder created on the user's POD.
-
-        appDirectory: appPodDirectory,
-
-        // Solid app registration details. Update these in lib/constants/app.dart
-        // to point at your own deployment; the clientId there must resolve to a
-        // client profile document listing exactly these redirect URIs (see the
-        // solid/ folder). See https://solidproject.org for more information.
-
-        link: appLink,
-        clientId: appClientId,
-        redirectUris: appRedirectUris,
-        postLogoutRedirectUris: appPostLogoutRedirectUris,
-        child: appScaffold,
       ),
     );
   }

@@ -974,7 +974,7 @@ packages:
     source: hosted
     version: "1.0.2"
   solidpod:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: solidpod
       sha256: "86fe853892033352be6ef70ace97ad910274be8ba31474fd172a22c16783d065"

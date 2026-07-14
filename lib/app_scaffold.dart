@@ -1,8 +1,3 @@
-/// Seedpod - the primary application scaffold.
-///
-/// This file was generated from the `solidui` app template
-/// (`dart run solidui:create`). Edit it freely to suit your app.
-
 library;
 
 import 'package:flutter/material.dart';
@@ -10,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/constants/app.dart';
-import 'package:seedpod/home.dart';
-import 'package:seedpod/screens/browse_files.dart';
+import 'package:seedpod/screens/health_screen.dart';
+import 'package:seedpod/screens/home_screen.dart';
+import 'package:seedpod/screens/share_screen.dart';
+import 'package:seedpod/screens/timeline_screen.dart';
 
 final _scaffoldController = SolidScaffoldController();
 
@@ -27,110 +24,89 @@ class AppScaffold extends StatelessWidget {
       hideNavRail: false,
       enableProfile: true,
       onLogout: (context) => SolidAuthHandler.instance.handleLogout(context),
-
-      // The navigation menu drives the side navigation rail (and the drawer on
-      // narrow screens). Each entry exposes a top-level page of the app.
-
       menu: const [
         SolidMenuItem(
-          icon: Icons.home,
+          icon: Icons.home_outlined,
           title: 'Home',
           tooltip: '''
 
             **Home**
 
-            Tap here to return to the main page for the app.
+            Your baby\'s dashboard with quick log access and today\'s summary.
 
             ''',
-          child: Home(title: appTitle),
+          child: HomeScreen(),
         ),
         SolidMenuItem(
-          icon: Icons.folder,
-          title: 'App Files',
+          icon: Icons.timeline,
+          title: 'Timeline',
           tooltip: '''
 
-            **Files**
+            **Timeline**
 
-            Tap here to browse the files on your POD for this app.
+            All log entries in chronological order.
 
             ''',
-          child: SolidFile(uploadConfig: appUploadConfig),
+          child: TimelineScreen(),
         ),
         SolidMenuItem(
-          icon: Icons.storage,
-          title: 'All POD Files',
+          icon: Icons.favorite_outline,
+          title: 'Health',
           tooltip: '''
 
-            **All Files**
+            **Health Records**
 
-            Tap here to browse all folders on your POD from the root.
+            Growth charts, vaccine schedule, and feeding log.
 
             ''',
-          child: BrowseFiles(),
+          child: HealthScreen(),
+        ),
+        SolidMenuItem(
+          icon: Icons.people_outline,
+          title: 'Share',
+          tooltip: '''
+
+            **Share Access**
+
+            Grant family and caregivers access to your baby\'s POD data.
+
+            ''',
+          child: ShareScreen(),
         ),
       ],
       appBar: SolidAppBarConfig(
-        title: appTitle.split(' - ')[0],
+        title: 'SeedPod',
         versionConfig: const SolidVersionConfig(
-          changelogUrl: 'https://github.com/example/seedpod/blob/dev/'
-              'CHANGELOG.md',
-          showUpdateButton: true,
-          downloadUrl: 'https://solidcommunity.au/installers/',
+          changelogUrl:
+              'https://github.com/YidingQiu/seedpod/blob/main/CHANGELOG.md',
+          showUpdateButton: false,
         ),
-        actions: [
-          SolidAppBarAction(
-            icon: Icons.folder,
-            onPressed: () => _scaffoldController.navigateToSubpage(
-              const SolidFile(uploadConfig: appUploadConfig),
-            ),
-            tooltip: 'Files',
-          ),
-        ],
       ),
-
-      // The status bar runs along the bottom of the window, surfacing the
-      // current server, login state and security key status.
-
       statusBar: const SolidStatusBarConfig(
         serverInfo: SolidServerInfo(serverUri: SolidConfig.defaultServerUrl),
         loginStatus: SolidLoginStatus(),
         securityKeyStatus: SolidSecurityKeyStatus(),
       ),
       aboutConfig: SolidAboutConfig(
-        applicationName: appTitle.split(' - ')[0],
+        applicationName: 'SeedPod',
         applicationIcon: Image.asset(
           'assets/images/app_icon.png',
           width: 64,
           height: 64,
         ),
-        applicationLegalese: '''
-
-        © Seedpod
-
-        ''',
+        applicationLegalese: '© SeedPod 2026',
         text: '''
 
-        Seedpod is a file browser application that allows you to manage
-        files on your personal online data store (Pod) hosted on a Solid
-        server.
+        SeedPod is a private baby tracker that stores all data
+        on your personal Solid POD — not on any central server.
 
-        Key features:
-
-        📂 Browse and manage files on your Solid POD;
-
-        📤 Upload files to your POD;
-
-        📥 Download files from your POD;
-
-        🔐 Security key management for encrypted data;
-
-        🎨 Theme switching (light/dark/system);
-
-        🧭 Responsive navigation (rail ↔ drawer).
+        Track growth, sleep, feeding, milestones, and health records
+        privately and securely. Share with family caregivers on your
+        own terms.
 
         Built with [solidpod](https://pub.dev/packages/solidpod) and
         [solidui](https://pub.dev/packages/solidui) for the
-        [Australian Solid Community](https://solidcommunity.au).
+        Australian Solid Community.
 
         ''',
       ),
@@ -139,7 +115,7 @@ class AppScaffold extends StatelessWidget {
         showInAppBarActions: true,
       ),
       inviteConfig: inviteOthersConfig,
-      child: const Home(title: appTitle),
+      child: const HomeScreen(),
     );
   }
 }

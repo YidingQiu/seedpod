@@ -52,6 +52,8 @@ const List<String> appPostLogoutRedirectUris = appRedirectUris;
 
 const String appPodDirectory = 'seedpod';
 
+const String appServerUri = 'https://pods.d01.solidcommunity.au';
+
 /// Homepage opened from the login page's info button. Point this at your own
 /// project page or documentation.
 

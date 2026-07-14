@@ -7,7 +7,6 @@ import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/log_entry.dart';
-import 'package:seedpod/models/module_prefs.dart';
 import 'package:seedpod/providers/app_state.dart';
 
 class QuickLogSheet extends StatefulWidget {

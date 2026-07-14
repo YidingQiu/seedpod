@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'package:solidui/solidui.dart';
 
-import 'package:seedpod/constants/app.dart';
+import 'package:seedpod/constants/app.dart' show appServerUri, inviteOthersConfig;
 import 'package:seedpod/providers/app_state.dart';
 import 'package:seedpod/screens/childcare_screen.dart';
 import 'package:seedpod/screens/health_screen.dart';
@@ -116,7 +116,7 @@ class AppScaffold extends StatelessWidget {
         ),
       ),
       statusBar: const SolidStatusBarConfig(
-        serverInfo: SolidServerInfo(serverUri: SolidConfig.defaultServerUrl),
+        serverInfo: SolidServerInfo(serverUri: appServerUri),
         loginStatus: SolidLoginStatus(),
         securityKeyStatus: SolidSecurityKeyStatus(),
       ),

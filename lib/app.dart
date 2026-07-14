@@ -32,6 +32,7 @@ class App extends StatelessWidget {
           clientId: appClientId,
           redirectUris: appRedirectUris,
           postLogoutRedirectUris: appPostLogoutRedirectUris,
+          webID: appServerUri,
           child: appScaffold,
         ),
       ),

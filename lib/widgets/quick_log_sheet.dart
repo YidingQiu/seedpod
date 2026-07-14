@@ -33,7 +33,9 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
 
   // Feeding fields
   String _feedingType = 'Breast';
+  String _breastSide = 'Left';
   final _feedingAmountController = TextEditingController();
+  final _feedingDurationController = TextEditingController();
 
   @override
   void dispose() {
@@ -42,6 +44,7 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
     _weightController.dispose();
     _heightController.dispose();
     _feedingAmountController.dispose();
+    _feedingDurationController.dispose();
     super.dispose();
   }
 
@@ -139,6 +142,10 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       case LogType.feeding:
         return {
           'type': _feedingType,
+          if (_feedingType == 'Breast') 'side': _breastSide,
+          if (_feedingType == 'Breast' &&
+              _feedingDurationController.text.trim().isNotEmpty)
+            'duration_min': _feedingDurationController.text.trim(),
           if (_feedingAmountController.text.trim().isNotEmpty)
             'amount_ml': _feedingAmountController.text.trim(),
           if (_noteController.text.trim().isNotEmpty)
@@ -318,14 +325,70 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                   ),
               ],
             ),
-            const SizedBox(height: 16),
-            _label('Amount (ml) — optional'),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _feedingAmountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(hintText: 'e.g. 120'),
-            ),
+            if (_feedingType == 'Breast') ...[
+              const SizedBox(height: 16),
+              _label('Which side?'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (final side in ['Left', 'Right'])
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: side == 'Left' ? 8 : 0,
+                        ),
+                        child: OutlinedButton(
+                          onPressed: () => setState(() => _breastSide = side),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: _breastSide == side
+                                ? colorPrimary.withOpacity(0.1)
+                                : null,
+                            side: BorderSide(
+                              color: _breastSide == side
+                                  ? colorPrimary
+                                  : colorDivider,
+                              width: _breastSide == side ? 2 : 1,
+                            ),
+                            foregroundColor: _breastSide == side
+                                ? colorPrimary
+                                : colorSecondary,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                side == 'Left'
+                                    ? Icons.arrow_back
+                                    : Icons.arrow_forward,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(side),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _label('Duration (minutes)'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _feedingDurationController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(hintText: 'e.g. 15'),
+              ),
+            ] else ...[
+              const SizedBox(height: 16),
+              _label('Amount (ml) — optional'),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _feedingAmountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(hintText: 'e.g. 120'),
+              ),
+            ],
             const SizedBox(height: 16),
             _noteField(),
           ],

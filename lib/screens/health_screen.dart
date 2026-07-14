@@ -2,6 +2,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/log_entry.dart';
@@ -38,7 +39,10 @@ class HealthScreen extends StatelessWidget {
         body: TabBarView(
           children: [
             _GrowthTab(state: state),
-            _VaccineTab(ageInDays: profile?.age.inDays ?? 0),
+            _VaccineTab(
+              ageInDays: profile?.age.inDays ?? 0,
+              dob: profile?.dateOfBirth,
+            ),
             _FeedingTab(state: state),
           ],
         ),
@@ -60,30 +64,35 @@ class _GrowthTab extends StatelessWidget {
         .toList()
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
+    final dob = state.profile?.dateOfBirth;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SectionCard(
-            title: 'WHO Growth Reference',
-            subtitle: 'Mock data — Typical range for age',
-            child: _WhoChart(entries: growthEntries),
+            title: 'WHO Weight-for-Age',
+            subtitle: 'Reference bands P3 / P50 / P97 (0–12 months)',
+            child: _WhoChart(entries: growthEntries, dob: dob),
           ),
           const SizedBox(height: 16),
           _SectionCard(
             title: 'Measurements History',
             child: growthEntries.isEmpty
-                ? const _EmptyHint('No growth measurements yet')
+                ? const _EmptyHint('No growth measurements yet — add one via Quick Log')
                 : Column(
                     children: [
-                      _MeasurementRow('Date', 'Weight', 'Height',
-                          isHeader: true),
+                      _MeasurementRow('Date', 'Weight', 'Height', isHeader: true),
                       for (final e in growthEntries.reversed)
                         _MeasurementRow(
                           _shortDate(e.timestamp),
-                          e.data['weight_kg']?.toString() ?? '--',
-                          e.data['height_cm']?.toString() ?? '--',
+                          e.data['weight_kg']?.toString().isNotEmpty == true
+                              ? '${e.data['weight_kg']} kg'
+                              : '--',
+                          e.data['height_cm']?.toString().isNotEmpty == true
+                              ? '${e.data['height_cm']} cm'
+                              : '--',
                         ),
                     ],
                   ),
@@ -99,57 +108,80 @@ class _GrowthTab extends StatelessWidget {
 
 class _WhoChart extends StatelessWidget {
   final List<LogEntry> entries;
-  const _WhoChart({required this.entries});
+  final DateTime? dob;
+  const _WhoChart({required this.entries, this.dob});
+
+  // WHO weight-for-age boys (approximation), months 0–12
+  static const _p3 = [
+    2.5, 3.4, 4.4, 5.1, 5.6, 6.1, 6.4, 6.7, 6.9, 7.1, 7.4, 7.6, 7.7,
+  ];
+  static const _p50 = [
+    3.3, 4.5, 5.6, 6.4, 7.0, 7.5, 7.9, 8.3, 8.6, 8.9, 9.2, 9.4, 9.6,
+  ];
+  static const _p97 = [
+    4.4, 5.8, 7.1, 8.0, 8.7, 9.3, 9.8, 10.2, 10.5, 10.9, 11.2, 11.5, 11.8,
+  ];
+
+  List<Offset> _dataPoints() {
+    if (dob == null) return [];
+    return entries
+        .where((e) => e.data['weight_kg']?.toString().isNotEmpty == true)
+        .map((e) {
+          final months = e.timestamp.difference(dob!).inDays / 30.44;
+          final kg = double.tryParse(e.data['weight_kg'].toString()) ?? 0;
+          return Offset(months, kg);
+        })
+        .where((p) => p.dx >= 0 && p.dx <= 12)
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Mock WHO percentile bands for 0-12 months
-    final mockP3 =
-        [3.3, 3.6, 4.1, 4.8, 5.4, 5.8, 6.2, 6.5, 6.8, 7.0, 7.2, 7.4, 7.6];
-    final mockP50 =
-        [3.9, 4.5, 5.3, 6.1, 6.7, 7.2, 7.6, 7.9, 8.2, 8.5, 8.7, 8.9, 9.2];
-    final mockP97 =
-        [4.6, 5.4, 6.5, 7.4, 8.1, 8.7, 9.2, 9.6, 10.0, 10.3, 10.6, 10.9, 11.2];
+    final currentMonths =
+        dob != null ? DateTime.now().difference(dob!).inDays / 30.44 : null;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          height: 180,
-          decoration: BoxDecoration(
-            color: colorBg,
-            borderRadius: BorderRadius.circular(radiusSmall),
-          ),
-          child: CustomPaint(
-            painter: _GrowthChartPainter(
-              p3: mockP3,
-              p50: mockP50,
-              p97: mockP97,
-              dataPoints: entries
-                  .where((e) => e.data['weight_kg']?.toString().isNotEmpty == true)
-                  .map((e) {
-                final ageMonths =
-                    (e.timestamp.difference(DateTime.now()).inDays.abs()) ~/ 30;
-                final w = double.tryParse(e.data['weight_kg'].toString()) ?? 0;
-                return Offset(ageMonths.toDouble(), w);
-              }).toList(),
-            ),
-          ),
+        LayoutBuilder(
+          builder: (ctx, constraints) {
+            const h = 200.0;
+            return SizedBox(
+              width: constraints.maxWidth,
+              height: h,
+              child: CustomPaint(
+                size: Size(constraints.maxWidth, h),
+                painter: _GrowthChartPainter(
+                  p3: _p3,
+                  p50: _p50,
+                  p97: _p97,
+                  dataPoints: _dataPoints(),
+                  currentAgeMonths: currentMonths,
+                ),
+              ),
+            );
+          },
         ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 16,
+          runSpacing: 4,
           children: [
-            _Legend(color: const Color(0xFFBBDFCA), label: 'P3-P97 range'),
-            const SizedBox(width: 16),
+            _Legend(color: const Color(0xFFBBDFCA), label: 'P3–P97 range'),
             _Legend(color: colorPrimary, label: 'P50 median'),
-            const SizedBox(width: 16),
             _Legend(color: colorAccent, label: 'Your baby'),
+            if (dob != null)
+              _Legend(
+                color: colorAccent.withOpacity(0.5),
+                label: 'Current age',
+                dashed: true,
+              ),
           ],
         ),
         const SizedBox(height: 4),
         const Text(
-          'Mock WHO data for demonstration',
-          style: TextStyle(color: colorSecondary, fontSize: 11),
+          'WHO reference approximation — not a substitute for medical advice',
+          style: TextStyle(color: colorSecondary, fontSize: 10),
         ),
       ],
     );
@@ -159,13 +191,15 @@ class _WhoChart extends StatelessWidget {
 class _Legend extends StatelessWidget {
   final Color color;
   final String label;
-  const _Legend({required this.color, required this.label});
+  final bool dashed;
+  const _Legend({required this.color, required this.label, this.dashed = false});
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 12, height: 3, color: color),
+        Container(width: 14, height: dashed ? 1.5 : 3, color: color),
         const SizedBox(width: 4),
         Text(label, style: const TextStyle(fontSize: 11, color: colorSecondary)),
       ],
@@ -178,36 +212,56 @@ class _GrowthChartPainter extends CustomPainter {
   final List<double> p50;
   final List<double> p97;
   final List<Offset> dataPoints;
+  final double? currentAgeMonths;
 
-  _GrowthChartPainter({
+  const _GrowthChartPainter({
     required this.p3,
     required this.p50,
     required this.p97,
     required this.dataPoints,
+    this.currentAgeMonths,
   });
+
+  static const double _padL = 34.0;
+  static const double _padB = 22.0;
+  static const double _padT = 6.0;
+  static const double _padR = 6.0;
+  static const double _minY = 2.0;
+  static const double _maxY = 13.0;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final n = p50.length;
-    final maxY = p97.reduce((a, b) => a > b ? a : b) + 1;
-    const minY = 2.0;
+    final chartW = size.width - _padL - _padR;
+    final chartH = size.height - _padT - _padB;
 
-    Offset toCanvas(double x, double y) {
-      return Offset(
-        x / (n - 1) * size.width,
-        size.height - (y - minY) / (maxY - minY) * size.height,
-      );
+    Offset toCanvas(double month, double kg) => Offset(
+          _padL + (month / 12.0) * chartW,
+          _padT + (1.0 - (kg - _minY) / (_maxY - _minY)) * chartH,
+        );
+
+    final labelStyle = const TextStyle(color: colorSecondary, fontSize: 9);
+
+    // Horizontal grid lines + Y labels
+    final gridPaint = Paint()
+      ..color = colorDivider
+      ..strokeWidth = 0.5;
+    for (final kg in [4.0, 6.0, 8.0, 10.0, 12.0]) {
+      final y = _padT + (1.0 - (kg - _minY) / (_maxY - _minY)) * chartH;
+      canvas.drawLine(Offset(_padL, y), Offset(size.width - _padR, y), gridPaint);
+      final tp = TextPainter(
+        text: TextSpan(text: '${kg.toInt()}', style: labelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(_padL - tp.width - 3, y - tp.height / 2));
     }
 
-    // Fill band P3-P97
+    // P3–P97 band fill
+    final n = p50.length;
     final bandPath = Path();
     for (int i = 0; i < n; i++) {
       final pt = toCanvas(i.toDouble(), p97[i]);
-      if (i == 0) {
-        bandPath.moveTo(pt.dx, pt.dy);
-      } else {
-        bandPath.lineTo(pt.dx, pt.dy);
-      }
+      if (i == 0) bandPath.moveTo(pt.dx, pt.dy);
+      else bandPath.lineTo(pt.dx, pt.dy);
     }
     for (int i = n - 1; i >= 0; i--) {
       final pt = toCanvas(i.toDouble(), p3[i]);
@@ -216,48 +270,87 @@ class _GrowthChartPainter extends CustomPainter {
     bandPath.close();
     canvas.drawPath(
       bandPath,
-      Paint()..color = const Color(0xFFBBDFCA).withOpacity(0.4),
+      Paint()..color = const Color(0xFFBBDFCA).withOpacity(0.45),
     );
 
-    // P50 line
-    final p50Paint = Paint()
-      ..color = colorPrimary
-      ..strokeWidth = 2
+    // P3 border line
+    final borderPaint = Paint()
+      ..color = const Color(0xFF4A7C59).withOpacity(0.25)
+      ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-    final p50Path = Path();
-    for (int i = 0; i < n; i++) {
-      final pt = toCanvas(i.toDouble(), p50[i]);
-      if (i == 0) {
-        p50Path.moveTo(pt.dx, pt.dy);
-      } else {
-        p50Path.lineTo(pt.dx, pt.dy);
-      }
-    }
-    canvas.drawPath(p50Path, p50Paint);
+    _drawLine(canvas, [for (int i = 0; i < n; i++) toCanvas(i.toDouble(), p3[i])], borderPaint);
+    _drawLine(canvas, [for (int i = 0; i < n; i++) toCanvas(i.toDouble(), p97[i])], borderPaint);
 
-    // Data points
-    final dotPaint = Paint()..color = colorAccent;
+    // P50 median line
+    _drawLine(
+      canvas,
+      [for (int i = 0; i < n; i++) toCanvas(i.toDouble(), p50[i])],
+      Paint()
+        ..color = colorPrimary
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke,
+    );
+
+    // Current age vertical marker
+    if (currentAgeMonths != null &&
+        currentAgeMonths! >= 0 &&
+        currentAgeMonths! <= 12) {
+      final markerX = _padL + (currentAgeMonths! / 12.0) * chartW;
+      canvas.drawLine(
+        Offset(markerX, _padT),
+        Offset(markerX, _padT + chartH),
+        Paint()
+          ..color = colorAccent.withOpacity(0.5)
+          ..strokeWidth = 1.5,
+      );
+    }
+
+    // Data point dots
     for (final dp in dataPoints) {
+      if (dp.dx < 0 || dp.dx > 12) continue;
       final pt = toCanvas(dp.dx, dp.dy);
-      if (pt.dx >= 0 && pt.dx <= size.width) {
-        canvas.drawCircle(pt, 5, dotPaint);
-      }
+      canvas.drawCircle(pt, 5, Paint()..color = colorAccent);
+      canvas.drawCircle(
+        pt,
+        5,
+        Paint()
+          ..color = Colors.white
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke,
+      );
     }
 
-    // Axis labels
-    final labelStyle = const TextStyle(color: colorSecondary, fontSize: 9);
-    for (int i = 0; i < n; i += 3) {
-      final pt = toCanvas(i.toDouble(), minY);
+    // X-axis labels
+    for (int i = 0; i <= 12; i += 3) {
+      final pt = toCanvas(i.toDouble(), _minY);
       final tp = TextPainter(
         text: TextSpan(text: '${i}m', style: labelStyle),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, Offset(pt.dx - tp.width / 2, size.height - 12));
+      tp.paint(canvas, Offset(pt.dx - tp.width / 2, size.height - _padB + 4));
     }
+
+    // "kg" unit label
+    final kgTp = TextPainter(
+      text: TextSpan(text: 'kg', style: labelStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    kgTp.paint(canvas, Offset(0, _padT));
+  }
+
+  void _drawLine(Canvas canvas, List<Offset> pts, Paint paint) {
+    if (pts.isEmpty) return;
+    final path = Path()..moveTo(pts[0].dx, pts[0].dy);
+    for (int i = 1; i < pts.length; i++) {
+      path.lineTo(pts[i].dx, pts[i].dy);
+    }
+    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _GrowthChartPainter old) =>
+      old.dataPoints.length != dataPoints.length ||
+      old.currentAgeMonths != currentAgeMonths;
 }
 
 class _MeasurementRow extends StatelessWidget {
@@ -272,13 +365,8 @@ class _MeasurementRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = isHeader
-        ? const TextStyle(
-            color: colorSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          )
+        ? const TextStyle(color: colorSecondary, fontSize: 12, fontWeight: FontWeight.w600)
         : const TextStyle(color: colorText, fontSize: 14);
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -294,40 +382,106 @@ class _MeasurementRow extends StatelessWidget {
 
 // ── Vaccine Tab ──────────────────────────────────────────────────────────────
 
-class _VaccineTab extends StatelessWidget {
-  final int ageInDays;
-  const _VaccineTab({required this.ageInDays});
+class _Vaccine {
+  final String name;
+  final String brand;
+  final bool isActFunded;
+  const _Vaccine(this.name, this.brand, {this.isActFunded = false});
+}
 
-  static const _schedule = [
-    _VaccineEntry('Birth', 0, ['BCG', 'Hepatitis B (1st dose)'], true),
-    _VaccineEntry('6 weeks', 42, [
-      'DTPa (1st)',
-      'IPV (1st)',
-      'Hib (1st)',
-      'Hepatitis B (2nd)',
-      'PCV (1st)',
-      'Rotavirus (1st)',
-    ], false),
-    _VaccineEntry('4 months', 120, [
-      'DTPa (2nd)',
-      'IPV (2nd)',
-      'Hib (2nd)',
-      'PCV (2nd)',
-      'Rotavirus (2nd)',
-    ], false),
-    _VaccineEntry('6 months', 180, [
-      'DTPa (3rd)',
-      'Hepatitis B (3rd)',
-      'Rotavirus (3rd)',
-    ], false),
-    _VaccineEntry('12 months', 365, [
-      'MMR (1st)',
-      'Hib (4th)',
-      'MenC',
-      'PCV (3rd)',
-      'Varicella (1st)',
-    ], false),
-  ];
+class _VaccineMilestone {
+  final String label;
+  final int ageDays;
+  final List<_Vaccine> vaccines;
+  const _VaccineMilestone(this.label, this.ageDays, this.vaccines);
+}
+
+const List<_VaccineMilestone> _actSchedule = [
+  _VaccineMilestone('Birth', 0, [
+    _Vaccine('Hepatitis B', 'Engerix-B or H-B-Vax II Paediatric'),
+  ]),
+  _VaccineMilestone('6 weeks', 42, [
+    _Vaccine('DTPa-hepB-IPV-Hib', 'Infanrix hexa'),
+    _Vaccine('Pneumococcal PCV13', 'Prevenar 13'),
+    _Vaccine('Rotavirus', 'Rotarix (dose 1 of 2)'),
+    _Vaccine('Meningococcal B', 'Bexsero', isActFunded: true),
+  ]),
+  _VaccineMilestone('4 months', 120, [
+    _Vaccine('DTPa-hepB-IPV-Hib', 'Infanrix hexa (2nd dose)'),
+    _Vaccine('Pneumococcal PCV13', 'Prevenar 13 (2nd dose)'),
+    _Vaccine('Rotavirus', 'Rotarix (dose 2, final)'),
+    _Vaccine('Meningococcal B', 'Bexsero (2nd dose)', isActFunded: true),
+  ]),
+  _VaccineMilestone('6 months', 182, [
+    _Vaccine('DTPa-hepB-IPV-Hib', 'Infanrix hexa (3rd dose)'),
+    _Vaccine('Meningococcal B', 'Bexsero (3rd dose)', isActFunded: true),
+  ]),
+  _VaccineMilestone('12 months', 365, [
+    _Vaccine('MMR', 'Priorix or M-M-R II'),
+    _Vaccine('Meningococcal ACWY', 'Nimenrix or Menactra'),
+    _Vaccine('Pneumococcal PCV13', 'Prevenar 13 (3rd dose, booster)'),
+    _Vaccine('Varicella (chickenpox)', 'Varilrix or Varivax'),
+    _Vaccine('Meningococcal B', 'Bexsero (4th dose, booster)', isActFunded: true),
+  ]),
+  _VaccineMilestone('18 months', 548, [
+    _Vaccine('DTPa', 'Infanrix or Tripacel'),
+    _Vaccine('Hib', 'ActHIB or Hiberix'),
+    _Vaccine('MMR + Varicella (MMRV)', 'Priorix-Tetra or ProQuad'),
+    _Vaccine('Hepatitis A', 'Avaxim Pediatric or Havrix Junior'),
+  ]),
+  _VaccineMilestone('4 years', 1461, [
+    _Vaccine('DTPa-IPV', 'Infanrix IPV or Quadracel'),
+    _Vaccine('MMR', 'Priorix or M-M-R II (if not received MMRV at 18 mo)'),
+    _Vaccine('Varicella', 'Varilrix or Varivax (if not received MMRV at 18 mo)'),
+  ]),
+];
+
+class _VaccineTab extends StatefulWidget {
+  final int ageInDays;
+  final DateTime? dob;
+  const _VaccineTab({required this.ageInDays, this.dob});
+
+  @override
+  State<_VaccineTab> createState() => _VaccineTabState();
+}
+
+class _VaccineTabState extends State<_VaccineTab> {
+  // key: "vax_M{mIdx}_V{vIdx}" → ISO date string
+  final Map<String, String> _doneMap = {};
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in prefs.getKeys()) {
+      if (key.startsWith('vax_')) {
+        final val = prefs.getString(key);
+        if (val != null) _doneMap[key] = val;
+      }
+    }
+    if (mounted) setState(() => _loaded = true);
+  }
+
+  Future<void> _toggle(int mIdx, int vIdx, bool done) async {
+    final key = 'vax_M${mIdx}_V$vIdx';
+    final prefs = await SharedPreferences.getInstance();
+    if (done) {
+      final date = DateTime.now().toIso8601String();
+      await prefs.setString(key, date);
+      setState(() => _doneMap[key] = date);
+    } else {
+      await prefs.remove(key);
+      setState(() => _doneMap.remove(key));
+    }
+  }
+
+  bool _isDone(int mIdx, int vIdx) => _doneMap.containsKey('vax_M${mIdx}_V$vIdx');
+  String? _doneDate(int mIdx, int vIdx) => _doneMap['vax_M${mIdx}_V$vIdx'];
 
   @override
   Widget build(BuildContext context) {
@@ -349,7 +503,7 @@ class _VaccineTab extends StatelessWidget {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Mock schedule based on Australian NIP. Always consult your doctor.',
+                    'ACT NIP Schedule (Feb 2025). ACT-funded MenB (Bexsero) is in addition to the national program. Always confirm with your GP or immunisation nurse.',
                     style: TextStyle(color: colorText, fontSize: 13),
                   ),
                 ),
@@ -357,94 +511,209 @@ class _VaccineTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          for (final v in _schedule)
-            _VaccineCard(entry: v, currentAgeDays: ageInDays),
+          if (!_loaded)
+            const Center(child: CircularProgressIndicator())
+          else
+            for (int mIdx = 0; mIdx < _actSchedule.length; mIdx++)
+              _MilestoneCard(
+                milestone: _actSchedule[mIdx],
+                currentAgeDays: widget.ageInDays,
+                vaccineCount: _actSchedule[mIdx].vaccines.length,
+                doneCount: List.generate(
+                  _actSchedule[mIdx].vaccines.length,
+                  (vIdx) => _isDone(mIdx, vIdx),
+                ).where((b) => b).length,
+                buildVaccineRow: (vIdx) => _VaccineRow(
+                  vaccine: _actSchedule[mIdx].vaccines[vIdx],
+                  checked: _isDone(mIdx, vIdx),
+                  dateIso: _doneDate(mIdx, vIdx),
+                  onChanged: (val) => _toggle(mIdx, vIdx, val ?? false),
+                ),
+              ),
         ],
       ),
     );
   }
 }
 
-class _VaccineEntry {
-  final String label;
-  final int ageDays;
-  final List<String> vaccines;
-  final bool givenAtBirth;
-
-  const _VaccineEntry(this.label, this.ageDays, this.vaccines, this.givenAtBirth);
-}
-
-class _VaccineCard extends StatelessWidget {
-  final _VaccineEntry entry;
+class _MilestoneCard extends StatelessWidget {
+  final _VaccineMilestone milestone;
   final int currentAgeDays;
+  final int vaccineCount;
+  final int doneCount;
+  final Widget Function(int vIdx) buildVaccineRow;
 
-  const _VaccineCard({required this.entry, required this.currentAgeDays});
+  const _MilestoneCard({
+    required this.milestone,
+    required this.currentAgeDays,
+    required this.vaccineCount,
+    required this.doneCount,
+    required this.buildVaccineRow,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isDue = currentAgeDays >= entry.ageDays;
-    final isOverdue = currentAgeDays > entry.ageDays + 14;
+    final allDone = doneCount == vaccineCount;
+    final isDue = currentAgeDays >= milestone.ageDays;
 
-    Color badgeColor = colorPrimary;
-    String badgeLabel = 'Upcoming';
-    if (isDue && !isOverdue) {
-      badgeColor = const Color(0xFFE8A87C);
-      badgeLabel = 'Due now';
-    } else if (isOverdue) {
-      badgeColor = const Color(0xFF4A7C59);
-      badgeLabel = 'Completed';
+    Color badgeColor;
+    String badgeText;
+    IconData badgeIcon;
+
+    if (allDone) {
+      badgeColor = colorPrimary;
+      badgeText = 'All done';
+      badgeIcon = Icons.check_circle_outline;
+    } else if (isDue && doneCount > 0) {
+      badgeColor = colorAccent;
+      badgeText = '$doneCount/$vaccineCount done';
+      badgeIcon = Icons.schedule;
+    } else if (isDue) {
+      badgeColor = colorAccent;
+      badgeText = 'Due now';
+      badgeIcon = Icons.notification_important_outlined;
+    } else {
+      badgeColor = colorSecondary;
+      badgeText = 'Upcoming';
+      badgeIcon = Icons.calendar_today_outlined;
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorCard,
-        border: Border.all(color: colorDivider),
+        border: Border.all(
+          color: allDone ? colorPrimary.withOpacity(0.35) : colorDivider,
+        ),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                entry.label,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            child: Row(
+              children: [
+                Icon(
+                  allDone ? Icons.vaccines : Icons.vaccines_outlined,
+                  color: allDone ? colorPrimary : colorSecondary,
+                  size: 20,
                 ),
-                child: Text(
-                  badgeLabel,
-                  style: TextStyle(
-                    color: badgeColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 10),
+                Text(
+                  milestone.label,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(badgeIcon, size: 12, color: badgeColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        badgeText,
+                        style: TextStyle(
+                          color: badgeColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16, color: colorDivider),
+          for (int vIdx = 0; vIdx < milestone.vaccines.length; vIdx++)
+            buildVaccineRow(vIdx),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _VaccineRow extends StatelessWidget {
+  final _Vaccine vaccine;
+  final bool checked;
+  final String? dateIso;
+  final ValueChanged<bool?> onChanged;
+
+  const _VaccineRow({
+    required this.vaccine,
+    required this.checked,
+    required this.dateIso,
+    required this.onChanged,
+  });
+
+  String? get _shortDate {
+    if (dateIso == null) return null;
+    final d = DateTime.tryParse(dateIso!);
+    if (d == null) return null;
+    return '${d.day}/${d.month}/${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CheckboxListTile(
+      value: checked,
+      onChanged: onChanged,
+      activeColor: colorPrimary,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      dense: true,
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              vaccine.name,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: checked ? colorPrimary : colorText,
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              for (final v in entry.vaccines)
-                Chip(
-                  label: Text(v, style: const TextStyle(fontSize: 12)),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: EdgeInsets.zero,
-                  backgroundColor: colorBg,
-                  side: const BorderSide(color: colorDivider),
+          if (vaccine.isActFunded)
+            Container(
+              margin: const EdgeInsets.only(left: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: colorAccent.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'ACT',
+                style: TextStyle(
+                  color: colorAccent,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
                 ),
-            ],
+              ),
+            ),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            vaccine.brand,
+            style: const TextStyle(color: colorSecondary, fontSize: 11),
           ),
+          if (_shortDate != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Given: $_shortDate',
+                style: const TextStyle(color: colorPrimary, fontSize: 11),
+              ),
+            ),
         ],
       ),
     );
@@ -464,19 +733,16 @@ class _FeedingTab extends StatelessWidget {
         .toList()
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    final today = feedingEntries
-        .where(
-          (e) =>
-              e.timestamp.year == DateTime.now().year &&
-              e.timestamp.month == DateTime.now().month &&
-              e.timestamp.day == DateTime.now().day,
-        )
-        .toList();
+    final today = feedingEntries.where((e) {
+      final now = DateTime.now();
+      return e.timestamp.year == now.year &&
+          e.timestamp.month == now.month &&
+          e.timestamp.day == now.day;
+    }).toList();
 
     final todayTotal = today.fold<double>(
       0,
-      (sum, e) =>
-          sum + (double.tryParse(e.data['amount_ml']?.toString() ?? '') ?? 0),
+      (sum, e) => sum + (double.tryParse(e.data['amount_ml']?.toString() ?? '') ?? 0),
     );
 
     return SingleChildScrollView(
@@ -488,11 +754,7 @@ class _FeedingTab extends StatelessWidget {
             title: "Today's Feeding",
             child: Row(
               children: [
-                _StatBox(
-                  '${today.length}',
-                  'sessions',
-                  Icons.local_cafe,
-                ),
+                _StatBox('${today.length}', 'sessions', Icons.local_cafe),
                 const SizedBox(width: 12),
                 _StatBox(
                   todayTotal > 0 ? '${todayTotal.toInt()}ml' : '--',
@@ -517,20 +779,20 @@ class _FeedingTab extends StatelessWidget {
           const SizedBox(height: 16),
           _SectionCard(
             title: 'Feeding Tips',
-            subtitle: 'Mock guidance — consult your healthcare provider',
+            subtitle: 'General guidance — consult your healthcare provider',
             child: const Column(
               children: [
                 _TipCard(
-                  'Newborn (0-3 months)',
-                  'Breast milk or formula every 2-3 hours, 8-12 times/day',
+                  'Newborn (0–3 months)',
+                  'Breast milk or formula every 2–3 hours, 8–12 times/day',
                 ),
                 _TipCard(
-                  '3-6 months',
-                  'Every 3-4 hours, watching for hunger/fullness cues',
+                  '3–6 months',
+                  'Every 3–4 hours; watch for hunger and fullness cues',
                 ),
                 _TipCard(
                   '6+ months',
-                  'Begin introducing solid foods alongside breast milk/formula',
+                  'Begin introducing solid foods alongside breast milk or formula',
                 ),
               ],
             ),
@@ -569,7 +831,10 @@ class _StatBox extends StatelessWidget {
                 color: colorText,
               ),
             ),
-            Text(label, style: const TextStyle(color: colorSecondary, fontSize: 12)),
+            Text(
+              label,
+              style: const TextStyle(color: colorSecondary, fontSize: 12),
+            ),
           ],
         ),
       ),
@@ -587,6 +852,14 @@ class _FeedingRow extends StatelessWidget {
     final min = entry.timestamp.minute.toString().padLeft(2, '0');
     final type = entry.data['type']?.toString() ?? 'Feeding';
     final amt = entry.data['amount_ml']?.toString();
+    final side = entry.data['side']?.toString();
+    final dur = entry.data['duration_min']?.toString();
+
+    final detail = [
+      if (side != null && side.isNotEmpty) side,
+      if (amt != null && amt.isNotEmpty) '${amt}ml',
+      if (dur != null && dur.isNotEmpty) '${dur}min',
+    ].join(' · ');
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -606,17 +879,19 @@ class _FeedingRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(type,
-                    style: const TextStyle(fontWeight: FontWeight.w500)),
-                if (amt != null && amt.isNotEmpty)
-                  Text('${amt}ml',
-                      style: const TextStyle(
-                          color: colorSecondary, fontSize: 13)),
+                Text(type, style: const TextStyle(fontWeight: FontWeight.w500)),
+                if (detail.isNotEmpty)
+                  Text(
+                    detail,
+                    style: const TextStyle(color: colorSecondary, fontSize: 13),
+                  ),
               ],
             ),
           ),
-          Text('$hour:$min',
-              style: const TextStyle(color: colorSecondary, fontSize: 12)),
+          Text(
+            '$hour:$min',
+            style: const TextStyle(color: colorSecondary, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -631,7 +906,7 @@ class _TipCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -641,11 +916,11 @@ class _TipCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text(tip,
-                    style: const TextStyle(
-                        color: colorSecondary, fontSize: 13)),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(
+                  tip,
+                  style: const TextStyle(color: colorSecondary, fontSize: 13),
+                ),
               ],
             ),
           ),
@@ -666,6 +941,7 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorCard,
@@ -678,8 +954,7 @@ class _SectionCard extends StatelessWidget {
           Text(title, style: Theme.of(context).textTheme.titleLarge),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
-            Text(subtitle!,
-                style: const TextStyle(color: colorSecondary, fontSize: 12)),
+            Text(subtitle!, style: const TextStyle(color: colorSecondary, fontSize: 12)),
           ],
           const SizedBox(height: 12),
           child,
@@ -698,10 +973,7 @@ class _EmptyHint extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Center(
-        child: Text(
-          message,
-          style: const TextStyle(color: colorSecondary),
-        ),
+        child: Text(message, style: const TextStyle(color: colorSecondary)),
       ),
     );
   }

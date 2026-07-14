@@ -188,7 +188,7 @@ class _PodPillState extends State<_PodPill> {
 
   Future<void> _load() async {
     final id = await getWebId();
-    if (mounted) setState(() => _webId = id as String?);
+    if (mounted) setState(() => _webId = id?.toString());
   }
 
   @override

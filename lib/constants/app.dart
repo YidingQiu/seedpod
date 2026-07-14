@@ -40,7 +40,7 @@ const String appClientId =
 const List<String> appRedirectUris = [
   'https://yidingqiu.github.io/seedpod/solid/redirect.html',
   'au.solidcommunity.seedpod://redirect',
-  'http://localhost:4400/redirect',
+  'http://localhost:4400/solid/redirect.html',
 ];
 
 /// Where the identity provider returns the user after logging out. By default

@@ -6,12 +6,12 @@
   "redirect_uris": [
     "https://yidingqiu.github.io/seedpod/solid/redirect.html",
     "au.solidcommunity.seedpod://redirect",
-    "http://localhost:4400/redirect"
+    "http://localhost:4400/solid/redirect.html"
   ],
   "post_logout_redirect_uris": [
     "https://yidingqiu.github.io/seedpod/solid/redirect.html",
     "au.solidcommunity.seedpod://redirect",
-    "http://localhost:4400/redirect"
+    "http://localhost:4400/solid/redirect.html"
   ],
   "scope": "openid profile offline_access webid",
   "grant_types": [

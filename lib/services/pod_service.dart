@@ -8,44 +8,106 @@ import 'package:seedpod/models/childcare_entry.dart';
 import 'package:seedpod/models/log_entry.dart';
 
 class PodService {
-  Future<BabyProfile?> readBabyProfile() async {
+  Future<void> createBaby(BabyProfile baby) async {
+    await _writeBaby(baby, overwrite: false);
+  }
+
+  Future<List<BabyProfile>> loadBabies() async {
+    final babies = await _loadBabiesDirectory();
+    if (babies.isNotEmpty) {
+      if (babies.length == 1) await _assignLegacyLogsTo(babies.single.id);
+      return babies;
+    }
+
+    final legacy = await _readLegacyBabyProfile();
+    if (legacy == null) return [];
+
+    final migrated = legacy.copyWith(id: BabyProfile.generateId());
+    await createBaby(migrated);
+    await _assignLegacyLogsTo(migrated.id);
+    return [migrated];
+  }
+
+  Future<void> updateBaby(BabyProfile baby) async {
+    await _writeBaby(baby, overwrite: true);
+  }
+
+  Future<void> deleteBaby(String babyId) async {
+    try {
+      final fileUrl = await getFileUrl(
+        '${await getDataDirPath()}/${BabyProfile.fileNameFor(babyId)}',
+      );
+      await deleteFile(fileUrl: fileUrl);
+    } on ResourceNotExistException {
+      return;
+    }
+  }
+
+  Future<void> _writeBaby(BabyProfile baby, {required bool overwrite}) async {
+    await writePod(
+      BabyProfile.fileNameFor(baby.id),
+      baby.toJsonString(),
+      encrypted: true,
+      overwrite: overwrite,
+    );
+  }
+
+  Future<List<BabyProfile>> _loadBabiesDirectory() async {
+    try {
+      final dataPath = await getDataDirPath();
+      final directoryUrl = await getDirUrl(
+        '$dataPath/${BabyProfile.babiesDirectory}',
+      );
+      final status = await checkResourceStatus(directoryUrl);
+      if (status == ResourceStatus.notExist) return [];
+      if (status != ResourceStatus.exist) {
+        throw Exception('Unable to access the babies directory ($status)');
+      }
+      final resources = await getResourcesInContainer(directoryUrl);
+      final babies = <BabyProfile>[];
+      for (final resource in resources.files) {
+        final name = Uri.parse(resource).pathSegments.last;
+        if (!RegExp(r'^baby_[A-Za-z0-9_-]+\.json\.enc\.ttl$').hasMatch(name)) {
+          continue;
+        }
+        final content = await readPod('${BabyProfile.babiesDirectory}/$name');
+        final baby = BabyProfile.tryParseJsonString(content);
+        if (baby == null || baby.id.isEmpty) {
+          throw FormatException('Invalid baby profile file: $name');
+        }
+        babies.add(baby);
+      }
+      return babies;
+    } on ResourceNotExistException {
+      return [];
+    } catch (e) {
+      debugPrint('loadBabies directory error: $e');
+      rethrow;
+    }
+  }
+
+  Future<BabyProfile?> _readLegacyBabyProfile() async {
     try {
       final content = await readPod(BabyProfile.fileName);
       return BabyProfile.tryParseJsonString(content);
     } on ResourceNotExistException {
       return null;
     } catch (e) {
-      debugPrint('readBabyProfile error: $e');
-      return null;
+      debugPrint('read legacy BabyProfile error: $e');
+      rethrow;
     }
   }
 
-  Future<bool> writeBabyProfile(BabyProfile profile) async {
-    try {
-      await writePod(
-        BabyProfile.fileName,
-        profile.toJsonString(),
-        encrypted: true,
-        overwrite: true,
-      );
-      return true;
-    } catch (e) {
-      debugPrint('writeBabyProfile error: $e');
-      return false;
-    }
-  }
-
-  Future<bool> deleteBabyProfile() async {
-    try {
-      final fileUrl = await getFileUrl(BabyProfile.fileName);
-      await deleteFile(fileUrl: fileUrl);
-      return true;
-    } on ResourceNotExistException {
-      return true;
-    } catch (e) {
-      debugPrint('deleteBabyProfile error: $e');
-      return false;
-    }
+  Future<void> _assignLegacyLogsTo(String babyId) async {
+    final entries = await readAllLogEntries();
+    if (!entries.any((entry) => entry.babyId.isEmpty)) return;
+    final migrated = entries
+        .map(
+          (entry) =>
+              entry.babyId.isEmpty ? entry.copyWith(babyId: babyId) : entry,
+        )
+        .toList();
+    await _writeAllLogEntries(migrated);
   }
 
   Future<List<LogEntry>> readAllLogEntries() async {
@@ -72,15 +134,28 @@ class PodService {
         // first entry ever
       }
       final updated = [entry, ...existing];
-      await writePod(
-        LogEntry.allEntriesFileName,
-        LogEntry.listToJsonString(updated),
-        encrypted: true,
-        overwrite: true,
-      );
+      await _writeAllLogEntries(updated);
       return true;
     } catch (e) {
       debugPrint('writeLogEntry error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateLog(LogEntry entry) async {
+    try {
+      final content = await readPod(LogEntry.allEntriesFileName);
+      final existing = LogEntry.listFromJsonString(content);
+      final index = existing.indexWhere(
+        (item) => item.id == entry.id && item.babyId == entry.babyId,
+      );
+      if (index == -1) return false;
+
+      final updated = [...existing]..[index] = entry;
+      await _writeAllLogEntries(updated);
+      return true;
+    } catch (e) {
+      debugPrint('updateLog error: $e');
       return false;
     }
   }
@@ -89,18 +164,20 @@ class PodService {
   /// import/merge, where writing one entry at a time would be O(n^2).
   Future<bool> writeAllLogEntries(List<LogEntry> entries) async {
     try {
-      await writePod(
-        LogEntry.allEntriesFileName,
-        LogEntry.listToJsonString(entries),
-        encrypted: true,
-        overwrite: true,
-      );
+      await _writeAllLogEntries(entries);
       return true;
     } catch (e) {
       debugPrint('writeAllLogEntries error: $e');
       return false;
     }
   }
+
+  Future<void> _writeAllLogEntries(List<LogEntry> entries) => writePod(
+        LogEntry.allEntriesFileName,
+        LogEntry.listToJsonString(entries),
+        encrypted: true,
+        overwrite: true,
+      );
 
   Future<List<ChildcareEntry>> readChildcareEntries() async {
     try {
@@ -128,5 +205,4 @@ class PodService {
       return false;
     }
   }
-
 }

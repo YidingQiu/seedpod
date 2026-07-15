@@ -151,8 +151,18 @@ class _DateHeader extends StatelessWidget {
     if (parsed == today) return 'Today';
     if (parsed == yesterday) return 'Yesterday';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
@@ -270,6 +280,13 @@ class _TimelineItem extends StatelessWidget {
                           '$hour:$min',
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
+                        IconButton(
+                          onPressed: () => _openEditor(context),
+                          tooltip: 'Edit log',
+                          icon: const Icon(Icons.edit_outlined, size: 19),
+                          color: colorPrimary,
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -293,6 +310,15 @@ class _TimelineItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _openEditor(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => QuickLogSheet(entry: entry),
     );
   }
 
@@ -356,9 +382,8 @@ class _TimelineItem extends StatelessWidget {
     );
   }
 
-  String _prettify(String key) =>
-      key.replaceAll('_', ' ').replaceFirstMapped(
-            RegExp(r'^.'),
-            (m) => m.group(0)!.toUpperCase(),
-          );
+  String _prettify(String key) => key.replaceAll('_', ' ').replaceFirstMapped(
+        RegExp(r'^.'),
+        (m) => m.group(0)!.toUpperCase(),
+      );
 }

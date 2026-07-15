@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 
 import 'package:solidui/solidui.dart';
 
-import 'package:seedpod/constants/app.dart' show appServerUri, inviteOthersConfig;
+import 'package:seedpod/constants/app.dart'
+    show appServerUri, inviteOthersConfig;
 import 'package:seedpod/providers/app_state.dart';
 import 'package:seedpod/screens/childcare_screen.dart';
 import 'package:seedpod/screens/health_screen.dart';

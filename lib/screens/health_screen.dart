@@ -14,7 +14,7 @@ class HealthScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final profile = state.profile;
+    final profile = state.selectedBaby;
 
     return DefaultTabController(
       length: 3,
@@ -64,7 +64,7 @@ class _GrowthTab extends StatelessWidget {
         .toList()
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    final dob = state.profile?.dateOfBirth;
+    final dob = state.selectedBaby?.dateOfBirth;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -80,10 +80,12 @@ class _GrowthTab extends StatelessWidget {
           _SectionCard(
             title: 'Measurements History',
             child: growthEntries.isEmpty
-                ? const _EmptyHint('No growth measurements yet — add one via Quick Log')
+                ? const _EmptyHint(
+                    'No growth measurements yet — add one via Quick Log')
                 : Column(
                     children: [
-                      _MeasurementRow('Date', 'Weight', 'Height', isHeader: true),
+                      _MeasurementRow('Date', 'Weight', 'Height',
+                          isHeader: true),
                       for (final e in growthEntries.reversed)
                         _MeasurementRow(
                           _shortDate(e.timestamp),
@@ -113,13 +115,49 @@ class _WhoChart extends StatelessWidget {
 
   // WHO weight-for-age boys (approximation), months 0–12
   static const _p3 = [
-    2.5, 3.4, 4.4, 5.1, 5.6, 6.1, 6.4, 6.7, 6.9, 7.1, 7.4, 7.6, 7.7,
+    2.5,
+    3.4,
+    4.4,
+    5.1,
+    5.6,
+    6.1,
+    6.4,
+    6.7,
+    6.9,
+    7.1,
+    7.4,
+    7.6,
+    7.7,
   ];
   static const _p50 = [
-    3.3, 4.5, 5.6, 6.4, 7.0, 7.5, 7.9, 8.3, 8.6, 8.9, 9.2, 9.4, 9.6,
+    3.3,
+    4.5,
+    5.6,
+    6.4,
+    7.0,
+    7.5,
+    7.9,
+    8.3,
+    8.6,
+    8.9,
+    9.2,
+    9.4,
+    9.6,
   ];
   static const _p97 = [
-    4.4, 5.8, 7.1, 8.0, 8.7, 9.3, 9.8, 10.2, 10.5, 10.9, 11.2, 11.5, 11.8,
+    4.4,
+    5.8,
+    7.1,
+    8.0,
+    8.7,
+    9.3,
+    9.8,
+    10.2,
+    10.5,
+    10.9,
+    11.2,
+    11.5,
+    11.8,
   ];
 
   List<Offset> _dataPoints() {
@@ -192,7 +230,8 @@ class _Legend extends StatelessWidget {
   final Color color;
   final String label;
   final bool dashed;
-  const _Legend({required this.color, required this.label, this.dashed = false});
+  const _Legend(
+      {required this.color, required this.label, this.dashed = false});
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +240,8 @@ class _Legend extends StatelessWidget {
       children: [
         Container(width: 14, height: dashed ? 1.5 : 3, color: color),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: colorSecondary)),
+        Text(label,
+            style: const TextStyle(fontSize: 11, color: colorSecondary)),
       ],
     );
   }
@@ -247,7 +287,8 @@ class _GrowthChartPainter extends CustomPainter {
       ..strokeWidth = 0.5;
     for (final kg in [4.0, 6.0, 8.0, 10.0, 12.0]) {
       final y = _padT + (1.0 - (kg - _minY) / (_maxY - _minY)) * chartH;
-      canvas.drawLine(Offset(_padL, y), Offset(size.width - _padR, y), gridPaint);
+      canvas.drawLine(
+          Offset(_padL, y), Offset(size.width - _padR, y), gridPaint);
       final tp = TextPainter(
         text: TextSpan(text: '${kg.toInt()}', style: labelStyle),
         textDirection: TextDirection.ltr,
@@ -260,8 +301,10 @@ class _GrowthChartPainter extends CustomPainter {
     final bandPath = Path();
     for (int i = 0; i < n; i++) {
       final pt = toCanvas(i.toDouble(), p97[i]);
-      if (i == 0) bandPath.moveTo(pt.dx, pt.dy);
-      else bandPath.lineTo(pt.dx, pt.dy);
+      if (i == 0)
+        bandPath.moveTo(pt.dx, pt.dy);
+      else
+        bandPath.lineTo(pt.dx, pt.dy);
     }
     for (int i = n - 1; i >= 0; i--) {
       final pt = toCanvas(i.toDouble(), p3[i]);
@@ -278,8 +321,14 @@ class _GrowthChartPainter extends CustomPainter {
       ..color = const Color(0xFF4A7C59).withOpacity(0.25)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-    _drawLine(canvas, [for (int i = 0; i < n; i++) toCanvas(i.toDouble(), p3[i])], borderPaint);
-    _drawLine(canvas, [for (int i = 0; i < n; i++) toCanvas(i.toDouble(), p97[i])], borderPaint);
+    _drawLine(
+        canvas,
+        [for (int i = 0; i < n; i++) toCanvas(i.toDouble(), p3[i])],
+        borderPaint);
+    _drawLine(
+        canvas,
+        [for (int i = 0; i < n; i++) toCanvas(i.toDouble(), p97[i])],
+        borderPaint);
 
     // P50 median line
     _drawLine(
@@ -365,7 +414,8 @@ class _MeasurementRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = isHeader
-        ? const TextStyle(color: colorSecondary, fontSize: 12, fontWeight: FontWeight.w600)
+        ? const TextStyle(
+            color: colorSecondary, fontSize: 12, fontWeight: FontWeight.w600)
         : const TextStyle(color: colorText, fontSize: 14);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -421,7 +471,8 @@ const List<_VaccineMilestone> _actSchedule = [
     _Vaccine('Meningococcal ACWY', 'Nimenrix or Menactra'),
     _Vaccine('Pneumococcal PCV13', 'Prevenar 13 (3rd dose, booster)'),
     _Vaccine('Varicella (chickenpox)', 'Varilrix or Varivax'),
-    _Vaccine('Meningococcal B', 'Bexsero (4th dose, booster)', isActFunded: true),
+    _Vaccine('Meningococcal B', 'Bexsero (4th dose, booster)',
+        isActFunded: true),
   ]),
   _VaccineMilestone('18 months', 548, [
     _Vaccine('DTPa', 'Infanrix or Tripacel'),
@@ -432,7 +483,8 @@ const List<_VaccineMilestone> _actSchedule = [
   _VaccineMilestone('4 years', 1461, [
     _Vaccine('DTPa-IPV', 'Infanrix IPV or Quadracel'),
     _Vaccine('MMR', 'Priorix or M-M-R II (if not received MMRV at 18 mo)'),
-    _Vaccine('Varicella', 'Varilrix or Varivax (if not received MMRV at 18 mo)'),
+    _Vaccine(
+        'Varicella', 'Varilrix or Varivax (if not received MMRV at 18 mo)'),
   ]),
 ];
 
@@ -480,7 +532,8 @@ class _VaccineTabState extends State<_VaccineTab> {
     }
   }
 
-  bool _isDone(int mIdx, int vIdx) => _doneMap.containsKey('vax_M${mIdx}_V$vIdx');
+  bool _isDone(int mIdx, int vIdx) =>
+      _doneMap.containsKey('vax_M${mIdx}_V$vIdx');
   String? _doneDate(int mIdx, int vIdx) => _doneMap['vax_M${mIdx}_V$vIdx'];
 
   @override
@@ -605,7 +658,8 @@ class _MilestoneCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: badgeColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -629,7 +683,8 @@ class _MilestoneCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16, color: colorDivider),
+          const Divider(
+              height: 1, indent: 16, endIndent: 16, color: colorDivider),
           for (int vIdx = 0; vIdx < milestone.vaccines.length; vIdx++)
             buildVaccineRow(vIdx),
           const SizedBox(height: 4),
@@ -742,7 +797,8 @@ class _FeedingTab extends StatelessWidget {
 
     final todayTotal = today.fold<double>(
       0,
-      (sum, e) => sum + (double.tryParse(e.data['amount_ml']?.toString() ?? '') ?? 0),
+      (sum, e) =>
+          sum + (double.tryParse(e.data['amount_ml']?.toString() ?? '') ?? 0),
     );
 
     return SingleChildScrollView(
@@ -916,7 +972,9 @@ class _TipCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14)),
                 Text(
                   tip,
                   style: const TextStyle(color: colorSecondary, fontSize: 13),
@@ -954,7 +1012,8 @@ class _SectionCard extends StatelessWidget {
           Text(title, style: Theme.of(context).textTheme.titleLarge),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
-            Text(subtitle!, style: const TextStyle(color: colorSecondary, fontSize: 12)),
+            Text(subtitle!,
+                style: const TextStyle(color: colorSecondary, fontSize: 12)),
           ],
           const SizedBox(height: 12),
           child,

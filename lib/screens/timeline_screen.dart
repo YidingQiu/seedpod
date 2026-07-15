@@ -45,6 +45,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
     return Scaffold(
       backgroundColor: colorBg,
+      appBar: AppBar(title: const Text('Timeline')),
       floatingActionButton: FloatingActionButton(
         onPressed: _openQuickLog,
         backgroundColor: colorPrimary,

@@ -7,6 +7,7 @@ import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/constants/app.dart'
     show appServerUri, inviteOthersConfig;
+import 'package:seedpod/screens/browse_files.dart';
 import 'package:seedpod/providers/app_state.dart';
 import 'package:seedpod/screens/childcare_screen.dart';
 import 'package:seedpod/screens/health_screen.dart';
@@ -115,6 +116,15 @@ class AppScaffold extends StatelessWidget {
               'https://github.com/YidingQiu/seedpod/blob/main/CHANGELOG.md',
           showUpdateButton: false,
         ),
+        overflowItems: [
+          SolidOverflowMenuItem(
+            id: 'browse_files',
+            icon: Icons.folder_open_outlined,
+            label: 'Browse POD Files',
+            onSelected: () =>
+                _scaffoldController.navigateToSubpage(const BrowseFiles()),
+          ),
+        ],
       ),
       statusBar: const SolidStatusBarConfig(
         serverInfo: SolidServerInfo(serverUri: appServerUri),

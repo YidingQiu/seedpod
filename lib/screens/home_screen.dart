@@ -7,6 +7,7 @@ import 'package:solidpod/solidpod.dart';
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/baby_profile.dart';
 import 'package:seedpod/models/log_entry.dart';
+import 'package:seedpod/models/module_prefs.dart';
 import 'package:seedpod/models/log_type_option.dart';
 import 'package:seedpod/models/vaccine_reminder.dart';
 import 'package:seedpod/providers/app_state.dart';
@@ -160,7 +161,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _showReminderSnackBarOnce(vaccineReminders.length);
 
     return Scaffold(
-      backgroundColor: colorBg,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openQuickLog,
         backgroundColor: colorPrimary,
@@ -193,7 +193,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 onDelete: () => _deleteBaby(profile),
               ),
               const SizedBox(height: 24),
-              _StatCards(entries: state.entries),
+              _StatCards(
+                entries: state.entries,
+                modulePrefs: state.modulePrefs,
+              ),
               const SizedBox(height: 16),
               _QuickLogPanel(onLog: _openQuickLog),
               const SizedBox(height: 16),
@@ -441,6 +444,7 @@ class _PodPill extends StatefulWidget {
 
 class _PodPillState extends State<_PodPill> {
   String? _webId;
+  late final ScrollController _scrollCtrl = ScrollController();
 
   @override
   void initState() {
@@ -448,31 +452,67 @@ class _PodPillState extends State<_PodPill> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final id = await getWebId();
     if (mounted) setState(() => _webId = id?.toString());
+  }
+
+  Future<void> _scrollReveal() async {
+    if (!_scrollCtrl.hasClients) return;
+    final max = _scrollCtrl.position.maxScrollExtent;
+    if (max <= 0) return;
+    await _scrollCtrl.animateTo(
+      max,
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeInOut,
+    );
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    await _scrollCtrl.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_webId == null) return const SizedBox.shrink();
     final server = Uri.tryParse(_webId!)?.host ?? '';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.lock, size: 12, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(
-            server,
-            style: const TextStyle(color: Colors.white, fontSize: 11),
-          ),
-        ],
+    return GestureDetector(
+      onTap: _scrollReveal,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock, size: 12, color: Colors.white),
+            const SizedBox(width: 4),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 100),
+              child: SingleChildScrollView(
+                controller: _scrollCtrl,
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                child: Text(
+                  server,
+                  style: const TextStyle(color: Colors.white, fontSize: 11),
+                  maxLines: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -486,7 +526,6 @@ class _QuickLogPanel extends StatelessWidget {
     LogType.growth,
     LogType.sleep,
     LogType.feeding,
-    LogType.milestone,
   };
 
   @override
@@ -502,34 +541,40 @@ class _QuickLogPanel extends StatelessWidget {
       children: [
         for (final opt in pinned) ...[
           Expanded(
-            child: _LogTypeTile(
-              option: opt,
-              onTap: () => onLog(opt.type),
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: _LogTypeTile(
+                option: opt,
+                onTap: () => onLog(opt.type),
+              ),
             ),
           ),
           const SizedBox(width: 8),
         ],
-        InkWell(
-          onTap: () => onLog(null),
-          borderRadius: BorderRadius.circular(radiusMedium),
-          child: Container(
-            width: 52,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: colorCard,
-              border: Border.all(color: colorDivider),
+        Expanded(
+          child: AspectRatio(
+            aspectRatio: 1.0,
+            child: InkWell(
+              onTap: () => onLog(null),
               borderRadius: BorderRadius.circular(radiusMedium),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.apps, color: colorSecondary, size: 20),
-                SizedBox(height: 2),
-                Text(
-                  'More',
-                  style: TextStyle(fontSize: 10, color: colorSecondary),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorCard,
+                  border: Border.all(color: colorDivider),
+                  borderRadius: BorderRadius.circular(radiusMedium),
                 ),
-              ],
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.apps, color: colorSecondary, size: 20),
+                    SizedBox(height: 2),
+                    Text(
+                      'More',
+                      style: TextStyle(fontSize: 10, color: colorSecondary),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -576,16 +621,15 @@ class _LogTypeTile extends StatelessWidget {
 
 class _StatCards extends StatelessWidget {
   final List<LogEntry> entries;
-  const _StatCards({required this.entries});
+  final ModulePrefs modulePrefs;
+  const _StatCards({required this.entries, required this.modulePrefs});
 
   @override
   Widget build(BuildContext context) {
     final cutoff = DateTime.now().subtract(const Duration(hours: 24));
     final past24 = entries.where((e) => e.timestamp.isAfter(cutoff)).toList();
 
-    final feedingCount =
-        past24.where((e) => e.type == LogType.feeding).length;
-
+    final feedingCount = past24.where((e) => e.type == LogType.feeding).length;
     final nappyCount = past24.where((e) => e.type == LogType.nappy).length;
 
     double sleepHours = 0;
@@ -602,6 +646,43 @@ class _StatCards extends StatelessWidget {
       }
     }
 
+    final cards = <Widget>[];
+    if (modulePrefs.isEnabled('feeding')) {
+      cards.add(Expanded(
+        child: _StatCard(
+          icon: Icons.local_cafe,
+          label: 'Feeding',
+          value: feedingCount > 0 ? '$feedingCount times' : '—',
+        ),
+      ));
+    }
+    if (modulePrefs.isEnabled('nappy')) {
+      cards.add(Expanded(
+        child: _StatCard(
+          icon: Icons.baby_changing_station,
+          label: 'Nappy',
+          value: nappyCount > 0 ? '$nappyCount times' : '—',
+        ),
+      ),);
+    }
+    if (modulePrefs.isEnabled('sleep')) {
+      cards.add(Expanded(
+        child: _StatCard(
+          icon: Icons.bedtime,
+          label: 'Sleep',
+          value: sleepHours > 0 ? '${sleepHours.toStringAsFixed(1)} h' : '—',
+        ),
+      ),);
+    }
+
+    if (cards.isEmpty) return const SizedBox.shrink();
+
+    final rowChildren = <Widget>[];
+    for (int i = 0; i < cards.length; i++) {
+      rowChildren.add(cards[i]);
+      if (i < cards.length - 1) rowChildren.add(const SizedBox(width: 8));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -615,35 +696,7 @@ class _StatCards extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.local_cafe,
-                label: 'Feeding',
-                value: feedingCount > 0 ? '$feedingCount times' : '—',
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.baby_changing_station,
-                label: 'Nappy',
-                value: nappyCount > 0 ? '$nappyCount times' : '—',
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.bedtime,
-                label: 'Sleep',
-                value: sleepHours > 0
-                    ? '${sleepHours.toStringAsFixed(1)} h'
-                    : '—',
-              ),
-            ),
-          ],
-        ),
+        Row(children: rowChildren),
       ],
     );
   }

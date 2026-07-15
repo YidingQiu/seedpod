@@ -32,7 +32,6 @@ class _ChildcareScreenState extends State<ChildcareScreen> {
     final entries = state.childcareEntries;
 
     return Scaffold(
-      backgroundColor: colorBg,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddSheet(context),
         backgroundColor: colorPrimary,

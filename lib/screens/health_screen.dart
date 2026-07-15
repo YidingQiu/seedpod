@@ -37,7 +37,6 @@ class HealthScreen extends StatelessWidget {
 
     if (tabLabels.isEmpty) {
       return Scaffold(
-        backgroundColor: colorBg,
         appBar: canGoBack
             ? AppBar(title: const Text('Health'))
             : null,
@@ -60,7 +59,6 @@ class HealthScreen extends StatelessWidget {
       length: tabLabels.length,
       initialIndex: clampedIndex,
       child: Scaffold(
-        backgroundColor: colorBg,
         appBar: AppBar(
           backgroundColor: colorCard,
           elevation: 0,

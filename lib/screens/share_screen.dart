@@ -6,6 +6,8 @@ import 'package:solidpod/solidpod.dart';
 import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/constants/theme.dart';
+import 'package:seedpod/models/childcare_entry.dart';
+import 'package:seedpod/models/log_entry.dart';
 
 class ShareScreen extends StatefulWidget {
   const ShareScreen({super.key});
@@ -16,16 +18,49 @@ class ShareScreen extends StatefulWidget {
 
 class _ShareScreenState extends State<ShareScreen> {
   String? _webId;
+  bool _loadingUrls = true;
+  final Map<String, String> _urlByLabel = {};
+  final Map<String, String> _descByLabel = {};
+  Set<String> _selectedUrls = {};
+  bool _showGrant = false;
+  List<String> _grantUrls = [];
+  Key _grantKey = UniqueKey();
 
   @override
   void initState() {
     super.initState();
-    _loadWebId();
+    _init();
   }
 
-  Future<void> _loadWebId() async {
+  Future<void> _init() async {
     final id = await getWebId();
-    if (mounted) setState(() => _webId = id?.toString());
+    if (!mounted) return;
+    setState(() => _webId = id?.toString());
+    if (id == null) {
+      if (mounted) setState(() => _loadingUrls = false);
+      return;
+    }
+    try {
+      final dataPath = await getDataDirPath();
+      final logUrl =
+          await getFileUrl('$dataPath/${LogEntry.allEntriesFileName}');
+      final childcareUrl =
+          await getFileUrl('$dataPath/${ChildcareEntry.fileName}');
+      if (!mounted) return;
+      setState(() {
+        _urlByLabel['Activity Log'] = logUrl;
+        _descByLabel['Activity Log'] =
+            'Feeding, sleep, nappy, growth and all other log entries';
+        _urlByLabel['Childcare Waitlist'] = childcareUrl;
+        _descByLabel['Childcare Waitlist'] =
+            'Waitlist applications and enrolment status for childcare centres';
+        _selectedUrls = {logUrl, childcareUrl};
+        _loadingUrls = false;
+      });
+    } catch (e) {
+      debugPrint('ShareScreen: error loading resource URLs: $e');
+      if (mounted) setState(() => _loadingUrls = false);
+    }
   }
 
   @override
@@ -45,30 +80,166 @@ class _ShareScreenState extends State<ShareScreen> {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
-
-          // How Solid sharing works
           _HowItWorksCard(),
           const SizedBox(height: 20),
-
-          // Your identity card
           if (_webId != null) ...[
             _YourWebIdCard(webId: _webId!),
             const SizedBox(height: 20),
           ],
-
-          // Grant permissions
-          Text(
-            'Manage Permissions',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Enter the WebID of the person you want to grant access to.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 12),
-          const GrantPermissionUi(showAppBar: false),
+          _buildResourceSection(context),
         ],
+      ),
+    );
+  }
+
+  Widget _buildResourceSection(BuildContext context) {
+    if (_loadingUrls) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_webId == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colorCard,
+          border: Border.all(color: colorDivider),
+          borderRadius: BorderRadius.circular(radiusMedium),
+        ),
+        child: Text(
+          'Log in to manage sharing permissions.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Manage Permissions',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Choose which parts of your data to share, then enter a caregiver\'s WebID to grant them access.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
+
+        // Resource checkboxes
+        ..._urlByLabel.entries.map((entry) {
+          final label = entry.key;
+          final url = entry.value;
+          final checked = _selectedUrls.contains(url);
+          return _ResourceCheckTile(
+            label: label,
+            description: _descByLabel[label] ?? '',
+            checked: checked,
+            onChanged: (v) {
+              setState(() {
+                if (v == true) {
+                  _selectedUrls.add(url);
+                } else {
+                  _selectedUrls.remove(url);
+                }
+                _showGrant = false;
+              });
+            },
+          );
+        }),
+
+        const SizedBox(height: 16),
+
+        if (!_showGrant) ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _selectedUrls.isEmpty
+                  ? null
+                  : () {
+                      setState(() {
+                        _showGrant = true;
+                        _grantUrls = _selectedUrls.toList();
+                        _grantKey = UniqueKey();
+                      });
+                    },
+              icon: const Icon(Icons.manage_accounts_outlined),
+              label: const Text('Set Permissions'),
+            ),
+          ),
+        ] else ...[
+          TextButton.icon(
+            onPressed: () => setState(() => _showGrant = false),
+            icon: const Icon(Icons.edit_outlined, size: 16),
+            label: const Text('Change selection'),
+          ),
+          const SizedBox(height: 8),
+          GrantPermissionUi(
+            key: _grantKey,
+            showAppBar: false,
+            resourceNames: _grantUrls,
+            titleData: {
+              for (final e in _urlByLabel.entries) e.value: e.key,
+            },
+          ),
+        ],
+
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+}
+
+class _ResourceCheckTile extends StatelessWidget {
+  final String label;
+  final String description;
+  final bool checked;
+  final ValueChanged<bool?> onChanged;
+
+  const _ResourceCheckTile({
+    required this.label,
+    required this.description,
+    required this.checked,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: colorCard,
+        border: Border.all(
+          color: checked ? colorPrimary.withValues(alpha:0.35) : colorDivider,
+        ),
+        borderRadius: BorderRadius.circular(radiusMedium),
+      ),
+      child: CheckboxListTile(
+        title: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(
+            description,
+            style: const TextStyle(
+              color: colorSecondary,
+              fontSize: 12,
+              height: 1.3,
+            ),
+          ),
+        ),
+        value: checked,
+        onChanged: onChanged,
+        activeColor: colorPrimary,
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       ),
     );
   }
@@ -88,13 +259,13 @@ class _HowItWorksCardState extends State<_HowItWorksCard> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            colorPrimary.withOpacity(0.08),
-            colorPrimary.withOpacity(0.03),
+            colorPrimary.withValues(alpha:0.08),
+            colorPrimary.withValues(alpha:0.03),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: colorPrimary.withOpacity(0.2)),
+        border: Border.all(color: colorPrimary.withValues(alpha:0.2)),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -129,39 +300,39 @@ class _HowItWorksCardState extends State<_HowItWorksCard> {
           ),
           if (_expanded) ...[
             const Divider(height: 1, color: Color(0xFFD4EAD9)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
                 children: [
-                  _StepRow(
+                  const _StepRow(
                     step: '1',
                     title: 'Share your WebID',
                     body:
                         'Your WebID is your Solid identity. Copy it and send it to the caregiver so they know who you are.',
                   ),
                   const SizedBox(height: 10),
-                  _StepRow(
+                  const _StepRow(
                     step: '2',
                     title: 'They get a WebID too',
                     body:
                         'The other person creates a free Solid POD at solidcommunity.au and gets their own WebID.',
                   ),
                   const SizedBox(height: 10),
-                  _StepRow(
+                  const _StepRow(
                     step: '3',
-                    title: 'Grant access below',
+                    title: 'Select resources and set permissions',
                     body:
-                        'Enter their WebID in the form below. Choose read-only or read/write access. They can only see what you explicitly allow.',
+                        'Tick the data you want to share, press Set Permissions, then enter their WebID and choose read or write access.',
                   ),
                   const SizedBox(height: 10),
-                  _StepRow(
+                  const _StepRow(
                     step: '4',
                     title: 'They log in and view your data',
                     body:
                         'The caregiver opens SeedPod, logs in with their account, and can now see your baby\'s shared data. You can revoke access any time.',
                   ),
                   const SizedBox(height: 14),
-                  Wrap(
+                  const Wrap(
                     spacing: 8,
                     runSpacing: 6,
                     children: [
@@ -333,7 +504,7 @@ class _AccessChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: colorPrimary.withOpacity(0.3)),
+        border: Border.all(color: colorPrimary.withValues(alpha:0.3)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -341,8 +512,10 @@ class _AccessChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: colorPrimary),
           const SizedBox(width: 4),
-          Text(label,
-              style: const TextStyle(color: colorPrimary, fontSize: 12)),
+          Text(
+            label,
+            style: const TextStyle(color: colorPrimary, fontSize: 12),
+          ),
         ],
       ),
     );

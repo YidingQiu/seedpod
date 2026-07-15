@@ -43,7 +43,6 @@ class ModulesScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: colorBg,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

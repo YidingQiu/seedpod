@@ -152,7 +152,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         !widget.isEditing && Navigator.of(context).canPop();
 
     return Scaffold(
-      backgroundColor: colorBg,
       appBar: showCreateAppBar
           ? AppBar(
               leading: IconButton(

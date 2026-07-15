@@ -23,6 +23,7 @@ class App extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: appTitle,
         theme: app_theme.buildAppTheme(),
+        darkTheme: app_theme.buildDarkTheme(),
         home: SolidLogin(
           title: 'SeedPod\nBaby Tracker',
           image: const AssetImage('assets/images/app_image.jpg'),

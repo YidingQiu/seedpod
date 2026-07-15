@@ -154,7 +154,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final profile = state.selectedBaby!;
-    final vaccineReminders = state.vaccineReminders;
+    final vaccineReminders = state.modulePrefs.isEnabled('vaccines')
+        ? state.vaccineReminders
+        : <VaccineReminder>[];
     _showReminderSnackBarOnce(vaccineReminders.length);
 
     return Scaffold(
@@ -476,16 +478,9 @@ class _PodPillState extends State<_PodPill> {
   }
 }
 
-class _QuickLogPanel extends StatefulWidget {
+class _QuickLogPanel extends StatelessWidget {
   final ValueChanged<LogType?> onLog;
   const _QuickLogPanel({required this.onLog});
-
-  @override
-  State<_QuickLogPanel> createState() => _QuickLogPanelState();
-}
-
-class _QuickLogPanelState extends State<_QuickLogPanel> {
-  bool _expanded = false;
 
   static const _pinnedTypes = {
     LogType.growth,
@@ -497,79 +492,47 @@ class _QuickLogPanelState extends State<_QuickLogPanel> {
   @override
   Widget build(BuildContext context) {
     final prefs = context.watch<AppState>().modulePrefs;
-    final all =
-        logTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
     final pinned = logTypeOptions
         .where(
           (o) => _pinnedTypes.contains(o.type) && prefs.isEnabled(o.moduleId),
         )
         .toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
       children: [
-        Row(
-          children: [
-            for (final opt in pinned) ...[
-              Expanded(
-                child: _LogTypeTile(
-                  option: opt,
-                  onTap: () => widget.onLog(opt.type),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-            InkWell(
-              onTap: () => setState(() => _expanded = !_expanded),
-              borderRadius: BorderRadius.circular(radiusMedium),
-              child: Container(
-                width: 52,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: colorCard,
-                  border: Border.all(color: colorDivider),
-                  borderRadius: BorderRadius.circular(radiusMedium),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _expanded ? Icons.expand_less : Icons.expand_more,
-                      color: colorSecondary,
-                      size: 20,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _expanded ? 'Less' : 'More',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: colorSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+        for (final opt in pinned) ...[
+          Expanded(
+            child: _LogTypeTile(
+              option: opt,
+              onTap: () => onLog(opt.type),
             ),
-          ],
-        ),
-        if (_expanded) ...[
-          const SizedBox(height: 8),
-          GridView.count(
-            crossAxisCount: 4,
-            childAspectRatio: 1.05,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            children: [
-              for (final opt in all)
-                _LogTypeTile(
-                  option: opt,
-                  onTap: () => widget.onLog(opt.type),
-                ),
-            ],
           ),
+          const SizedBox(width: 8),
         ],
+        InkWell(
+          onTap: () => onLog(null),
+          borderRadius: BorderRadius.circular(radiusMedium),
+          child: Container(
+            width: 52,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: colorCard,
+              border: Border.all(color: colorDivider),
+              borderRadius: BorderRadius.circular(radiusMedium),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.apps, color: colorSecondary, size: 20),
+                SizedBox(height: 2),
+                Text(
+                  'More',
+                  style: TextStyle(fontSize: 10, color: colorSecondary),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

@@ -27,7 +27,8 @@ class ModulesScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Your Modules', style: Theme.of(context).textTheme.headlineMedium),
+            Text('Your Modules',
+                style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 6),
             Text(
               'Choose what you want to track. All modules are available from birth — suggestions are just hints.',
@@ -67,12 +68,14 @@ class ModulesScreen extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: colorCard,
-                border: Border.all(color: colorDivider, style: BorderStyle.solid),
+                border:
+                    Border.all(color: colorDivider, style: BorderStyle.solid),
                 borderRadius: BorderRadius.circular(radiusMedium),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.add_circle_outline, color: colorSecondary, size: 20),
+                  const Icon(Icons.add_circle_outline,
+                      color: colorSecondary, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -93,7 +96,8 @@ class ModulesScreen extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: colorSecondary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -227,7 +231,8 @@ class _ModuleCard extends StatelessWidget {
           padding: const EdgeInsets.only(top: 2),
           child: Text(
             module.description,
-            style: const TextStyle(color: colorSecondary, fontSize: 12, height: 1.3),
+            style: const TextStyle(
+                color: colorSecondary, fontSize: 12, height: 1.3),
           ),
         ),
         trailing: Switch(

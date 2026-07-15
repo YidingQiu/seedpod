@@ -151,8 +151,18 @@ class _DateHeader extends StatelessWidget {
     if (parsed == today) return 'Today';
     if (parsed == yesterday) return 'Yesterday';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
@@ -356,9 +366,8 @@ class _TimelineItem extends StatelessWidget {
     );
   }
 
-  String _prettify(String key) =>
-      key.replaceAll('_', ' ').replaceFirstMapped(
-            RegExp(r'^.'),
-            (m) => m.group(0)!.toUpperCase(),
-          );
+  String _prettify(String key) => key.replaceAll('_', ' ').replaceFirstMapped(
+        RegExp(r'^.'),
+        (m) => m.group(0)!.toUpperCase(),
+      );
 }

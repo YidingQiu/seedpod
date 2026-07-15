@@ -1,14 +1,17 @@
 library;
 
 import 'dart:convert';
+import 'dart:math';
 
 class BabyProfile {
+  final String id;
   final String name;
   final DateTime dateOfBirth;
   final String? gender;
   final String? photoUrl;
 
   const BabyProfile({
+    required this.id,
     required this.name,
     required this.dateOfBirth,
     this.gender,
@@ -16,6 +19,18 @@ class BabyProfile {
   });
 
   static const String fileName = 'profile.json.enc.ttl';
+  static const String babiesDirectory = 'babies';
+
+  static String generateId() {
+    final random = Random.secure();
+    return List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+  }
+
+  static String fileNameFor(String id) =>
+      '$babiesDirectory/baby_$id.json.enc.ttl';
 
   Duration get age => DateTime.now().difference(dateOfBirth);
 
@@ -38,6 +53,7 @@ class BabyProfile {
 
   factory BabyProfile.fromJson(Map<String, dynamic> json) {
     return BabyProfile(
+      id: json['id'] as String? ?? '',
       name: json['name'] as String,
       dateOfBirth: DateTime.parse(json['dateOfBirth'] as String),
       gender: json['gender'] as String?,
@@ -46,6 +62,7 @@ class BabyProfile {
   }
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'name': name,
         'dateOfBirth': dateOfBirth.toIso8601String(),
         if (gender != null) 'gender': gender,
@@ -65,12 +82,14 @@ class BabyProfile {
   }
 
   BabyProfile copyWith({
+    String? id,
     String? name,
     DateTime? dateOfBirth,
     String? gender,
     String? photoUrl,
   }) {
     return BabyProfile(
+      id: id ?? this.id,
       name: name ?? this.name,
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       gender: gender ?? this.gender,

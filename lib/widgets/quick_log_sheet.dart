@@ -11,7 +11,7 @@ import 'package:seedpod/providers/app_state.dart';
 
 class QuickLogSheet extends StatefulWidget {
   final LogType? initialType;
-  
+
   const QuickLogSheet({super.key, this.initialType});
 
   @override
@@ -86,15 +86,19 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
     _LogTypeOption(LogType.feeding, Icons.local_cafe, 'Feeding', 'feeding'),
     _LogTypeOption(LogType.milestone, Icons.star, 'Milestone', 'milestone'),
     // Optional
-    _LogTypeOption(LogType.nappy, Icons.baby_changing_station, 'Nappy', 'nappy'),
+    _LogTypeOption(
+        LogType.nappy, Icons.baby_changing_station, 'Nappy', 'nappy'),
     _LogTypeOption(LogType.food, Icons.restaurant, 'Food', 'food'),
     _LogTypeOption(LogType.medication, Icons.medication, 'Meds', 'medication'),
-    _LogTypeOption(LogType.appointment, Icons.local_hospital, 'Doctor', 'appointment'),
+    _LogTypeOption(
+        LogType.appointment, Icons.local_hospital, 'Doctor', 'appointment'),
     _LogTypeOption(LogType.health, Icons.favorite, 'Health', 'health'),
     _LogTypeOption(LogType.teeth, Icons.mood, 'Teeth', 'teeth'),
     _LogTypeOption(LogType.memory, Icons.auto_stories, 'Memory', 'memory'),
-    _LogTypeOption(LogType.sleep_training, Icons.nightlight, 'Sleep Trng', 'sleep_training'),
-    _LogTypeOption(LogType.environment, Icons.wb_sunny, 'Weather', 'environment'),
+    _LogTypeOption(LogType.sleep_training, Icons.nightlight, 'Sleep Trng',
+        'sleep_training'),
+    _LogTypeOption(
+        LogType.environment, Icons.wb_sunny, 'Weather', 'environment'),
     _LogTypeOption(LogType.note, Icons.edit_note, 'Note', 'milestone'),
   ];
 
@@ -200,45 +204,58 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       case LogType.nappy:
         return {
           'type': _nappyType,
-          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty)
+            'note': _noteController.text.trim(),
         };
       case LogType.medication:
         return {
           'name': _medicationNameCtrl.text.trim(),
           if (_doseCtrl.text.trim().isNotEmpty) 'dose': _doseCtrl.text.trim(),
-          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty)
+            'note': _noteController.text.trim(),
         };
       case LogType.food:
         return {
           'name': _foodNameCtrl.text.trim(),
           'reaction': _foodReaction,
-          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty)
+            'note': _noteController.text.trim(),
         };
       case LogType.teeth:
         return {
-          if (_toothCtrl.text.trim().isNotEmpty) 'tooth': _toothCtrl.text.trim(),
-          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+          if (_toothCtrl.text.trim().isNotEmpty)
+            'tooth': _toothCtrl.text.trim(),
+          if (_noteController.text.trim().isNotEmpty)
+            'note': _noteController.text.trim(),
         };
       case LogType.memory:
         return {
-          if (_titleController.text.trim().isNotEmpty) 'title': _titleController.text.trim(),
-          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+          if (_titleController.text.trim().isNotEmpty)
+            'title': _titleController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty)
+            'note': _noteController.text.trim(),
         };
       case LogType.appointment:
         return {
           'type': _appointmentType,
-          if (_doctorCtrl.text.trim().isNotEmpty) 'doctor': _doctorCtrl.text.trim(),
-          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+          if (_doctorCtrl.text.trim().isNotEmpty)
+            'doctor': _doctorCtrl.text.trim(),
+          if (_noteController.text.trim().isNotEmpty)
+            'note': _noteController.text.trim(),
         };
       case LogType.sleep_training:
         return {
-          if (_titleController.text.trim().isNotEmpty) 'method': _titleController.text.trim(),
-          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+          if (_titleController.text.trim().isNotEmpty)
+            'method': _titleController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty)
+            'note': _noteController.text.trim(),
         };
       default:
         return {
-          if (_titleController.text.trim().isNotEmpty) 'title': _titleController.text.trim(),
-          if (_noteController.text.trim().isNotEmpty) 'note': _noteController.text.trim(),
+          if (_titleController.text.trim().isNotEmpty)
+            'title': _titleController.text.trim(),
+          if (_noteController.text.trim().isNotEmpty)
+            'note': _noteController.text.trim(),
         };
     }
   }
@@ -253,7 +270,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       builder: (context, scroll) => Container(
         decoration: const BoxDecoration(
           color: colorBg,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(radiusLarge)),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(radiusLarge)),
         ),
         child: Column(
           children: [
@@ -318,9 +336,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
 
   Widget _buildTypeGrid() {
     final prefs = context.read<AppState>().modulePrefs;
-    final visible = _allTypeOptions
-        .where((o) => prefs.isEnabled(o.moduleId))
-        .toList();
+    final visible =
+        _allTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
     return GridView.count(
       crossAxisCount: 4,
       shrinkWrap: true,
@@ -348,7 +365,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _weightController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(hintText: 'e.g. 5.2'),
             ),
             const SizedBox(height: 16),
@@ -356,7 +374,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _heightController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(hintText: 'e.g. 58.5'),
             ),
             const SizedBox(height: 16),
@@ -504,7 +523,9 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                     label: Text(t),
                     selected: _nappyType == t,
                     selectedColor: colorPrimary.withOpacity(0.15),
-                    onSelected: (s) { if (s) setState(() => _nappyType = t); },
+                    onSelected: (s) {
+                      if (s) setState(() => _nappyType = t);
+                    },
                   ),
               ],
             ),
@@ -520,7 +541,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _medicationNameCtrl,
-              decoration: const InputDecoration(hintText: 'e.g. Panadol, Vitamin D'),
+              decoration:
+                  const InputDecoration(hintText: 'e.g. Panadol, Vitamin D'),
             ),
             const SizedBox(height: 16),
             _label('Dose (optional)'),
@@ -541,7 +563,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _foodNameCtrl,
-              decoration: const InputDecoration(hintText: 'e.g. Pureed pumpkin'),
+              decoration:
+                  const InputDecoration(hintText: 'e.g. Pureed pumpkin'),
             ),
             const SizedBox(height: 16),
             _label('Reaction'),
@@ -558,7 +581,9 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                         : r == 'Mild'
                             ? Colors.orange.withOpacity(0.2)
                             : colorPrimary.withOpacity(0.15),
-                    onSelected: (s) { if (s) setState(() => _foodReaction = r); },
+                    onSelected: (s) {
+                      if (s) setState(() => _foodReaction = r);
+                    },
                   ),
               ],
             ),
@@ -574,7 +599,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _toothCtrl,
-              decoration: const InputDecoration(hintText: 'e.g. Bottom front left'),
+              decoration:
+                  const InputDecoration(hintText: 'e.g. Bottom front left'),
             ),
             const SizedBox(height: 16),
             _noteField(),
@@ -604,12 +630,20 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
               spacing: 8,
               runSpacing: 6,
               children: [
-                for (final t in ['GP', 'Paediatrician', 'Specialist', 'Dentist', 'Emergency'])
+                for (final t in [
+                  'GP',
+                  'Paediatrician',
+                  'Specialist',
+                  'Dentist',
+                  'Emergency'
+                ])
                   ChoiceChip(
                     label: Text(t),
                     selected: _appointmentType == t,
                     selectedColor: colorPrimary.withOpacity(0.15),
-                    onSelected: (s) { if (s) setState(() => _appointmentType = t); },
+                    onSelected: (s) {
+                      if (s) setState(() => _appointmentType = t);
+                    },
                   ),
               ],
             ),
@@ -618,7 +652,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _doctorCtrl,
-              decoration: const InputDecoration(hintText: 'e.g. Dr. Smith, Calvary'),
+              decoration:
+                  const InputDecoration(hintText: 'e.g. Dr. Smith, Calvary'),
             ),
             const SizedBox(height: 16),
             _noteField(),
@@ -632,7 +667,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(hintText: 'e.g. Fever 38.5°C, runny nose'),
+              decoration: const InputDecoration(
+                  hintText: 'e.g. Fever 38.5°C, runny nose'),
             ),
             const SizedBox(height: 16),
             _noteField(),
@@ -646,7 +682,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(hintText: 'e.g. Ferber, extinction, chair'),
+              decoration: const InputDecoration(
+                  hintText: 'e.g. Ferber, extinction, chair'),
             ),
             const SizedBox(height: 16),
             _noteField(),

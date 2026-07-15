@@ -110,7 +110,8 @@ class _ChildcareScreenState extends State<ChildcareScreen> {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, ChildcareEntry entry) async {
+  Future<void> _confirmDelete(
+      BuildContext context, ChildcareEntry entry) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -181,7 +182,8 @@ class _CountChip extends StatelessWidget {
       ),
       child: Text(
         '$count $label',
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -204,7 +206,8 @@ class _EmptyState extends StatelessWidget {
         children: [
           const Icon(Icons.school_outlined, size: 40, color: colorSecondary),
           const SizedBox(height: 12),
-          Text('No centres yet', style: Theme.of(context).textTheme.titleMedium),
+          Text('No centres yet',
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           const Text(
             'Add childcare centres and schools you have applied to or are interested in.',
@@ -272,7 +275,8 @@ class _EntryCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.school_outlined, size: 18, color: colorPrimary),
+                  const Icon(Icons.school_outlined,
+                      size: 18, color: colorPrimary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -281,7 +285,8 @@ class _EntryCard extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: color.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(20),
@@ -350,7 +355,8 @@ class _EntryCard extends StatelessWidget {
                     onPressed: onDelete,
                     icon: const Icon(Icons.delete_outline, size: 16),
                     label: const Text('Remove'),
-                    style: TextButton.styleFrom(foregroundColor: colorSecondary),
+                    style:
+                        TextButton.styleFrom(foregroundColor: colorSecondary),
                   ),
                 ],
               ),
@@ -461,7 +467,8 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
   }
 
   Future<void> _pickDate({required bool isStart}) async {
-    final initial = isStart ? _appliedDate : (_desiredStartDate ?? DateTime.now());
+    final initial =
+        isStart ? _appliedDate : (_desiredStartDate ?? DateTime.now());
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -489,7 +496,8 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
       builder: (ctx, scroll) => Container(
         decoration: const BoxDecoration(
           color: colorBg,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(radiusLarge)),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(radiusLarge)),
         ),
         child: Column(
           children: [
@@ -514,7 +522,6 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 20),
-
                     _label('Centre / School Name *'),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -524,7 +531,6 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
                     Row(
                       children: [
                         Expanded(
@@ -557,7 +563,8 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                                     .map((t) => DropdownMenuItem(
                                           value: t,
                                           child: Text(t,
-                                              style: const TextStyle(fontSize: 13)),
+                                              style: const TextStyle(
+                                                  fontSize: 13)),
                                         ))
                                     .toList(),
                                 onChanged: (v) => setState(() => _type = v),
@@ -568,7 +575,6 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                       ],
                     ),
                     const SizedBox(height: 16),
-
                     _label('Status'),
                     const SizedBox(height: 8),
                     Wrap(
@@ -585,7 +591,6 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                           .toList(),
                     ),
                     const SizedBox(height: 16),
-
                     Row(
                       children: [
                         Expanded(
@@ -607,7 +612,6 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                       ],
                     ),
                     const SizedBox(height: 16),
-
                     Row(
                       children: [
                         Expanded(
@@ -648,7 +652,6 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                       ],
                     ),
                     const SizedBox(height: 16),
-
                     _label('Notes (optional)'),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -659,7 +662,6 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -673,7 +675,9 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
                                   color: Colors.white,
                                 ),
                               )
-                            : Text(widget.existing == null ? 'Save Centre' : 'Update Centre'),
+                            : Text(widget.existing == null
+                                ? 'Save Centre'
+                                : 'Update Centre'),
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -687,8 +691,8 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
     );
   }
 
-  Widget _label(String text) =>
-      Text(text, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14));
+  Widget _label(String text) => Text(text,
+      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14));
 }
 
 class _DateTile extends StatelessWidget {
@@ -711,7 +715,8 @@ class _DateTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+        Text(label,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
         const SizedBox(height: 8),
         InkWell(
           onTap: onTap,

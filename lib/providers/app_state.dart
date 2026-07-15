@@ -13,7 +13,8 @@ enum LoadState { idle, loading, loaded, error }
 class AppState extends ChangeNotifier {
   final _pod = PodService();
 
-  BabyProfile? _profile;
+  List<BabyProfile> _babies = [];
+  String? _selectedBabyId;
   List<LogEntry> _entries = [];
   List<ChildcareEntry> _childcareEntries = [];
   ModulePrefs _modulePrefs = ModulePrefs.defaults;
@@ -22,21 +23,35 @@ class AppState extends ChangeNotifier {
   LoadState _childcareState = LoadState.idle;
   String? _error;
 
-  BabyProfile? get profile => _profile;
-  List<LogEntry> get entries => List.unmodifiable(_entries);
-  List<ChildcareEntry> get childcareEntries => List.unmodifiable(_childcareEntries);
+  List<BabyProfile> get babies => List.unmodifiable(_babies);
+  String? get selectedBabyId => _selectedBabyId;
+  BabyProfile? get selectedBaby {
+    for (final baby in _babies) {
+      if (baby.id == _selectedBabyId) return baby;
+    }
+    return null;
+  }
+
+  List<LogEntry> get entries => List.unmodifiable(
+        _entries.where((entry) => entry.babyId == _selectedBabyId),
+      );
+  List<ChildcareEntry> get childcareEntries =>
+      List.unmodifiable(_childcareEntries);
   ModulePrefs get modulePrefs => _modulePrefs;
   LoadState get profileState => _profileState;
   LoadState get entriesState => _entriesState;
   LoadState get childcareState => _childcareState;
   String? get error => _error;
-  bool get hasProfile => _profile != null;
+  bool get hasBabies => _babies.isNotEmpty;
 
   Future<void> loadProfile() async {
     _profileState = LoadState.loading;
     notifyListeners();
     try {
-      _profile = await _pod.readBabyProfile();
+      _babies = await _pod.loadBabies();
+      if (!_babies.any((baby) => baby.id == _selectedBabyId)) {
+        _selectedBabyId = _babies.firstOrNull?.id;
+      }
       _profileState = LoadState.loaded;
     } catch (e) {
       _error = e.toString();
@@ -45,31 +60,51 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> saveProfile(BabyProfile profile) async {
-    final ok = await _pod.writeBabyProfile(profile);
-    if (ok) {
-      _profile = profile;
+  Future<bool> addBaby(BabyProfile baby) async {
+    try {
+      await _pod.createBaby(baby);
+      _babies = [..._babies, baby];
+      _selectedBabyId = baby.id;
       notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
     }
-    return ok;
   }
 
-  Future<bool> updateProfile(BabyProfile profile) async {
-    final ok = await _pod.writeBabyProfile(profile);
-    if (ok) {
-      _profile = profile;
-      notifyListeners();
-    }
-    return ok;
+  void selectBaby(String babyId) {
+    if (!_babies.any((baby) => baby.id == babyId)) return;
+    _selectedBabyId = babyId;
+    notifyListeners();
   }
 
-  Future<bool> deleteProfile() async {
-    final ok = await _pod.deleteBabyProfile();
-    if (ok) {
-      _profile = null;
+  Future<bool> updateBaby(BabyProfile baby) async {
+    try {
+      await _pod.updateBaby(baby);
+      _babies =
+          _babies.map((item) => item.id == baby.id ? baby : item).toList();
       notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
     }
-    return ok;
+  }
+
+  Future<bool> deleteBaby(String babyId) async {
+    try {
+      await _pod.deleteBaby(babyId);
+      _babies = _babies.where((baby) => baby.id != babyId).toList();
+      if (_selectedBabyId == babyId) {
+        _selectedBabyId = _babies.firstOrNull?.id;
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    }
   }
 
   Future<void> loadEntries() async {
@@ -86,9 +121,12 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> addEntry(LogEntry entry) async {
-    final ok = await _pod.writeLogEntry(entry);
+    final baby = selectedBaby;
+    if (baby == null) return false;
+    final scopedEntry = entry.copyWith(babyId: baby.id);
+    final ok = await _pod.writeLogEntry(scopedEntry);
     if (ok) {
-      _entries = [entry, ..._entries];
+      _entries = [scopedEntry, ..._entries];
       notifyListeners();
     }
     return ok;
@@ -133,9 +171,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<bool> updateChildcareEntry(ChildcareEntry entry) async {
-    final updated = _childcareEntries
-        .map((e) => e.id == entry.id ? entry : e)
-        .toList();
+    final updated =
+        _childcareEntries.map((e) => e.id == entry.id ? entry : e).toList();
     return saveChildcareEntries(updated);
   }
 
@@ -146,7 +183,7 @@ class AppState extends ChangeNotifier {
 
   List<LogEntry> get todayEntries {
     final now = DateTime.now();
-    return _entries.where((e) {
+    return entries.where((e) {
       return e.timestamp.year == now.year &&
           e.timestamp.month == now.month &&
           e.timestamp.day == now.day;

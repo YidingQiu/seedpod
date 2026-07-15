@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const QuickLogSheet(initialType: initialType),
+      builder: (_) => QuickLogSheet(initialType: initialType),
     );
   }
 
@@ -302,13 +302,20 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog)),
+        Expanded(
+            child:
+                _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog)),
+        Expanded(
+            child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.local_cafe, 'Feeding', LogType.feeding, onLog)),
+        Expanded(
+            child: _ActionChip(
+                Icons.local_cafe, 'Feeding', LogType.feeding, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog)),
+        Expanded(
+            child:
+                _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog)),
       ],
     );
   }
@@ -501,7 +508,8 @@ class _LogCard extends StatelessWidget {
       case LogType.food:
         final food = e.data['name']?.toString() ?? 'Food';
         final reaction = e.data['reaction']?.toString();
-        if (reaction != null && reaction != 'None') return '$food (reaction: $reaction)';
+        if (reaction != null && reaction != 'None')
+          return '$food (reaction: $reaction)';
         return 'First food: $food';
       case LogType.teeth:
         return e.data['tooth']?.toString() ?? 'Tooth eruption';

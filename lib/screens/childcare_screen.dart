@@ -22,7 +22,12 @@ class _ChildcareScreenState extends State<ChildcareScreen> {
     super.didChangeDependencies();
     final state = context.read<AppState>();
     if (state.childcareState == LoadState.idle) {
-      state.loadChildcareEntries();
+      // Defer to after the current frame: loadChildcareEntries() calls
+      // notifyListeners() synchronously, which would otherwise fire while
+      // the widget tree is still building and throw.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) state.loadChildcareEntries();
+      });
     }
   }
 

@@ -10,6 +10,7 @@ import 'package:seedpod/models/log_entry.dart';
 import 'package:seedpod/models/log_type_option.dart';
 import 'package:seedpod/providers/app_state.dart';
 import 'package:seedpod/screens/onboarding_screen.dart';
+import 'package:seedpod/services/log_transfer.dart';
 import 'package:seedpod/widgets/quick_log_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -49,6 +50,20 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => QuickLogSheet(initialType: initialType),
     );
+  }
+
+  Future<void> _onDataMenu(String action) async {
+    final state = context.read<AppState>();
+    switch (action) {
+      case 'export_json':
+        await LogTransfer.exportJson(context, state.entries);
+      case 'export_csv':
+        await LogTransfer.exportCsv(context, state.entries);
+      case 'import_json':
+        await LogTransfer.importJson(context, state);
+      case 'import_csv':
+        await LogTransfer.importCsv(context, state);
+    }
   }
 
   Future<void> _openEditProfile(BabyProfile profile) async {
@@ -137,6 +152,45 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: 'Import / export data',
+                  onSelected: _onDataMenu,
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'export_json',
+                      child: ListTile(
+                        leading: Icon(Icons.file_download_outlined),
+                        title: Text('Export as JSON'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'export_csv',
+                      child: ListTile(
+                        leading: Icon(Icons.table_view_outlined),
+                        title: Text('Export as CSV'),
+                      ),
+                    ),
+                    PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'import_json',
+                      child: ListTile(
+                        leading: Icon(Icons.file_upload_outlined),
+                        title: Text('Import from JSON'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'import_csv',
+                      child: ListTile(
+                        leading: Icon(Icons.upload_file_outlined),
+                        title: Text('Import from CSV'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               _BabyCard(
                 profile: profile,
                 onEdit: () => _openEditProfile(profile),

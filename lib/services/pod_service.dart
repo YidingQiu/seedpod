@@ -85,6 +85,23 @@ class PodService {
     }
   }
 
+  /// Overwrites the entire log-entries file. Used for bulk operations such as
+  /// import/merge, where writing one entry at a time would be O(n^2).
+  Future<bool> writeAllLogEntries(List<LogEntry> entries) async {
+    try {
+      await writePod(
+        LogEntry.allEntriesFileName,
+        LogEntry.listToJsonString(entries),
+        encrypted: true,
+        overwrite: true,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('writeAllLogEntries error: $e');
+      return false;
+    }
+  }
+
   Future<List<ChildcareEntry>> readChildcareEntries() async {
     try {
       final content = await readPod(ChildcareEntry.fileName);

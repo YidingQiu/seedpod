@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seedpod.app/schemas/quick_log_export.schema.json",
+  "title": "SeedPod Quick Log Export",
+  "description": "Import/export envelope for SeedPod quick-log entries. Produced by QuickLogIo.exportJson and consumed by QuickLogIo.importJson.",
+  "type": "object",
+  "required": ["version", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1",
+      "description": "Export format version."
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the export was generated (ISO 8601)."
+    },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["id", "type", "timestamp", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable unique id (millisecond epoch string by default)."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "growth", "sleep", "feeding", "milestone", "health", "photo",
+            "environment", "note", "nappy", "medication", "food", "teeth",
+            "memory", "appointment", "sleep_training"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "description": "Type-specific fields; constrained by the allOf branches below."
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "growth" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_growth" } } } },
+        { "if": { "properties": { "type": { "const": "sleep" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_sleep" } } } },
+        { "if": { "properties": { "type": { "const": "feeding" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_feeding" } } } },
+        { "if": { "properties": { "type": { "const": "milestone" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_title_note" } } } },
+        { "if": { "properties": { "type": { "const": "health" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_title_note" } } } },
+        { "if": { "properties": { "type": { "const": "nappy" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_nappy" } } } },
+        { "if": { "properties": { "type": { "const": "medication" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_medication" } } } },
+        { "if": { "properties": { "type": { "const": "food" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_food" } } } },
+        { "if": { "properties": { "type": { "const": "teeth" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_teeth" } } } },
+        { "if": { "properties": { "type": { "const": "memory" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_title_note" } } } },
+        { "if": { "properties": { "type": { "const": "appointment" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_appointment" } } } },
+        { "if": { "properties": { "type": { "const": "sleep_training" } } },
+          "then": { "properties": { "data": { "$ref": "#/$defs/data_sleep_training" } } } }
+      ]
+    },
+
+    "data_growth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "weight_kg": { "type": "string" },
+        "height_cm": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "data_sleep": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" },
+        "note": { "type": "string" }
+      }
+    },
+    "data_feeding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["Breast", "Bottle", "Formula", "Solids"] },
+        "side": { "type": "string", "enum": ["Left", "Right"] },
+        "duration_min": { "type": "string" },
+        "amount_ml": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "data_nappy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["Wet", "Dirty", "Both", "Dry"] },
+        "note": { "type": "string" }
+      }
+    },
+    "data_medication": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "dose": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "data_food": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "reaction": { "type": "string", "enum": ["None", "Mild", "Severe"] },
+        "note": { "type": "string" }
+      }
+    },
+    "data_teeth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tooth": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "data_appointment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string" },
+        "doctor": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "data_sleep_training": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "method": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "data_title_note": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

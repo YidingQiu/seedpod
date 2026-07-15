@@ -10,6 +10,24 @@ import 'package:seedpod/services/pod_service.dart';
 
 enum LoadState { idle, loading, loaded, error }
 
+/// Outcome of [AppState.importEntries].
+class ImportResult {
+  /// Number of new entries written.
+  final int added;
+
+  /// Number of incoming entries skipped because their id already existed.
+  final int skipped;
+
+  /// True if persisting the merged list to the POD failed.
+  final bool failed;
+
+  const ImportResult({
+    required this.added,
+    required this.skipped,
+    this.failed = false,
+  });
+}
+
 class AppState extends ChangeNotifier {
   final _pod = PodService();
 
@@ -92,6 +110,35 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
     return ok;
+  }
+
+  /// Result of an import: how many new entries were added, plus a failure flag.
+  Future<ImportResult> importEntries(List<LogEntry> incoming) async {
+    if (incoming.isEmpty) return const ImportResult(added: 0, skipped: 0);
+
+    final existingIds = _entries.map((e) => e.id).toSet();
+    final fresh = <LogEntry>[];
+    var skipped = 0;
+    for (final e in incoming) {
+      if (existingIds.contains(e.id)) {
+        skipped++;
+      } else {
+        existingIds.add(e.id);
+        fresh.add(e);
+      }
+    }
+
+    if (fresh.isEmpty) return ImportResult(added: 0, skipped: skipped);
+
+    final merged = [...fresh, ..._entries]
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+    final ok = await _pod.writeAllLogEntries(merged);
+    if (!ok) return ImportResult(added: 0, skipped: skipped, failed: true);
+
+    _entries = merged;
+    notifyListeners();
+    return ImportResult(added: fresh.length, skipped: skipped);
   }
 
   Future<void> loadModulePrefs() async {

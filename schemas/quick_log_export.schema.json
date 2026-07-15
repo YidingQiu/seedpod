@@ -100,7 +100,7 @@
       "additionalProperties": false,
       "properties": {
         "type": { "type": "string", "enum": ["Breast", "Bottle", "Formula", "Solids"] },
-        "side": { "type": "string", "enum": ["Left", "Right"] },
+        "side": { "type": "string", "enum": ["Left", "Both", "Right"] },
         "duration_min": { "type": "string" },
         "amount_ml": { "type": "string" },
         "note": { "type": "string" }

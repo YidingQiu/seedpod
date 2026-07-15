@@ -525,11 +525,11 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  for (final side in ['Left', 'Right'])
+                  for (final side in ['Left', 'Both', 'Right'])
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.only(
-                          right: side == 'Left' ? 8 : 0,
+                          right: side == 'Right' ? 0 : 8,
                         ),
                         child: OutlinedButton(
                           onPressed: () => setState(() => _breastSide = side),
@@ -553,7 +553,9 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                               Icon(
                                 side == 'Left'
                                     ? Icons.arrow_back
-                                    : Icons.arrow_forward,
+                                    : side == 'Right'
+                                        ? Icons.arrow_forward
+                                        : Icons.swap_horiz,
                                 size: 16,
                               ),
                               const SizedBox(width: 6),

@@ -9,11 +9,12 @@ import 'package:seedpod/models/log_entry.dart';
 
 class PodService {
   Future<void> createBaby(BabyProfile baby) async {
-    await _writeBaby(baby, overwrite: false);
+    final existing = await _readAllBabies();
+    await _writeAllBabies([...existing, baby]);
   }
 
   Future<List<BabyProfile>> loadBabies() async {
-    final babies = await _loadBabiesDirectory();
+    final babies = await _readAllBabies();
     if (babies.isNotEmpty) {
       if (babies.length == 1) await _assignLegacyLogsTo(babies.single.id);
       return babies;
@@ -22,69 +23,49 @@ class PodService {
     final legacy = await _readLegacyBabyProfile();
     if (legacy == null) return [];
 
-    final migrated = legacy.copyWith(id: BabyProfile.generateId());
-    await createBaby(migrated);
+    final migrated = legacy.id.isEmpty
+        ? legacy.copyWith(id: BabyProfile.generateId())
+        : legacy;
+    await _writeAllBabies([migrated]);
     await _assignLegacyLogsTo(migrated.id);
     return [migrated];
   }
 
   Future<void> updateBaby(BabyProfile baby) async {
-    await _writeBaby(baby, overwrite: true);
+    final existing = await _readAllBabies();
+    final index = existing.indexWhere((b) => b.id == baby.id);
+    if (index == -1) {
+      await _writeAllBabies([...existing, baby]);
+    } else {
+      await _writeAllBabies([...existing]..[index] = baby);
+    }
   }
 
   Future<void> deleteBaby(String babyId) async {
-    try {
-      final fileUrl = await getFileUrl(
-        '${await getDataDirPath()}/${BabyProfile.fileNameFor(babyId)}',
-      );
-      await deleteFile(fileUrl: fileUrl);
-    } on ResourceNotExistException {
-      return;
-    }
+    final existing = await _readAllBabies();
+    await _writeAllBabies(existing.where((b) => b.id != babyId).toList());
   }
 
-  Future<void> _writeBaby(BabyProfile baby, {required bool overwrite}) async {
-    await writePod(
-      BabyProfile.fileNameFor(baby.id),
-      baby.toJsonString(),
-      encrypted: true,
-      overwrite: overwrite,
-    );
-  }
-
-  Future<List<BabyProfile>> _loadBabiesDirectory() async {
+  Future<List<BabyProfile>> _readAllBabies() async {
     try {
-      final dataPath = await getDataDirPath();
-      final directoryUrl = await getDirUrl(
-        '$dataPath/${BabyProfile.babiesDirectory}',
-      );
-      final status = await checkResourceStatus(directoryUrl);
-      if (status == ResourceStatus.notExist) return [];
-      if (status != ResourceStatus.exist) {
-        throw Exception('Unable to access the babies directory ($status)');
-      }
-      final resources = await getResourcesInContainer(directoryUrl);
-      final babies = <BabyProfile>[];
-      for (final resource in resources.files) {
-        final name = Uri.parse(resource).pathSegments.last;
-        if (!RegExp(r'^baby_[A-Za-z0-9_-]+\.json\.enc\.ttl$').hasMatch(name)) {
-          continue;
-        }
-        final content = await readPod('${BabyProfile.babiesDirectory}/$name');
-        final baby = BabyProfile.tryParseJsonString(content);
-        if (baby == null || baby.id.isEmpty) {
-          throw FormatException('Invalid baby profile file: $name');
-        }
-        babies.add(baby);
-      }
-      return babies;
+      final content = await readPod(BabyProfile.allProfilesFileName);
+      return BabyProfile.listFromJsonString(content)
+          .where((b) => b.id.isNotEmpty)
+          .toList();
     } on ResourceNotExistException {
       return [];
     } catch (e) {
-      debugPrint('loadBabies directory error: $e');
-      rethrow;
+      debugPrint('_readAllBabies error: $e');
+      return [];
     }
   }
+
+  Future<void> _writeAllBabies(List<BabyProfile> babies) => writePod(
+        BabyProfile.allProfilesFileName,
+        BabyProfile.listToJsonString(babies),
+        encrypted: true,
+        overwrite: true,
+      );
 
   Future<BabyProfile?> _readLegacyBabyProfile() async {
     try {

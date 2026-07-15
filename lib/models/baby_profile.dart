@@ -19,7 +19,22 @@ class BabyProfile {
   });
 
   static const String fileName = 'profile.json.enc.ttl';
+  static const String allProfilesFileName = 'babies.json.enc.ttl';
   static const String babiesDirectory = 'babies';
+
+  static List<BabyProfile> listFromJsonString(String s) {
+    try {
+      final list = jsonDecode(s) as List;
+      return list
+          .map((e) => BabyProfile.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static String listToJsonString(List<BabyProfile> babies) =>
+      jsonEncode(babies.map((b) => b.toJson()).toList());
 
   static String generateId() {
     final random = Random.secure();

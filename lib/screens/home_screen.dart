@@ -94,9 +94,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Delete ${baby.name}?'),
-        content: const Text(
-          'This will remove this baby profile from your Solid POD. This action cannot be undone.',
+        title: Text('Remove ${baby.name}?'),
+        content: Text(
+          'This will remove ${baby.name}\'s profile and all associated logs from your Solid POD.\n\n'
+          '${baby.webId != null ? 'Note: the Solid account (${baby.webId}) will NOT be deleted — contact your POD provider to remove it.\n\n' : ''}'
+          'This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -637,8 +639,9 @@ class _LogCard extends StatelessWidget {
       case LogType.food:
         final food = e.data['name']?.toString() ?? 'Food';
         final reaction = e.data['reaction']?.toString();
-        if (reaction != null && reaction != 'None')
+        if (reaction != null && reaction != 'None') {
           return '$food (reaction: $reaction)';
+        }
         return 'First food: $food';
       case LogType.teeth:
         return e.data['tooth']?.toString() ?? 'Tooth eruption';

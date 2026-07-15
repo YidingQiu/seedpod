@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:solidpod/solidpod.dart';
 import 'package:solidui/solidui.dart';
 
+import 'package:seedpod/constants/app.dart' show appServerUri;
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/baby_profile.dart';
 import 'package:seedpod/providers/app_state.dart';
@@ -27,9 +28,11 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _webIdController = TextEditingController();
   DateTime? _selectedDate;
   String? _selectedGender;
   bool _isSaving = false;
+  bool _podCreated = false;
 
   @override
   void initState() {
@@ -38,13 +41,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _nameController.text = widget.initialProfile!.name;
       _selectedDate = widget.initialProfile!.dateOfBirth;
       _selectedGender = widget.initialProfile!.gender;
+      _webIdController.text = widget.initialProfile!.webId ?? '';
     }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _webIdController.dispose();
     super.dispose();
+  }
+
+  Future<void> _createPod() async {
+    final created = await createAccountPopup(
+      context,
+      widget,
+      serverUrl: appServerUri,
+    );
+    if (created && mounted) {
+      setState(() => _podCreated = true);
+    }
   }
 
   Future<void> _pickDate() async {
@@ -85,11 +101,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
       await getKeyFromUserIfRequired(context, widget);
 
+      final webId = _webIdController.text.trim();
       final profile = BabyProfile(
         id: widget.initialProfile?.id ?? BabyProfile.generateId(),
         name: _nameController.text.trim(),
         dateOfBirth: _selectedDate!,
         gender: _selectedGender,
+        webId: webId.isEmpty ? null : webId,
       );
 
       if (!mounted) return;
@@ -193,6 +211,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
+                    if (!widget.isEditing) ...[
+                      _PodSetupCard(
+                        podCreated: _podCreated,
+                        onCreatePod: _createPod,
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     Text(
                       "Baby's name",
                       style: Theme.of(context).textTheme.titleMedium,
@@ -274,6 +299,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                       ],
                     ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Baby's Solid WebID (optional)",
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _webIdController,
+                      decoration: const InputDecoration(
+                        hintText:
+                            'https://pods.d01.solidcommunity.au/babyname/profile/card#me',
+                        prefixIcon: Icon(Icons.link),
+                      ),
+                      keyboardType: TextInputType.url,
+                    ),
                     const SizedBox(height: 40),
                     SizedBox(
                       width: double.infinity,
@@ -302,6 +342,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PodSetupCard extends StatelessWidget {
+  final bool podCreated;
+  final VoidCallback onCreatePod;
+
+  const _PodSetupCard({required this.podCreated, required this.onCreatePod});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: podCreated
+            ? Colors.green.withValues(alpha: 0.08)
+            : colorPrimary.withValues(alpha: 0.06),
+        border: Border.all(
+          color: podCreated ? Colors.green : colorPrimary.withValues(alpha: 0.3),
+        ),
+        borderRadius: BorderRadius.circular(radiusMedium),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                podCreated ? Icons.check_circle : Icons.cloud_outlined,
+                color: podCreated ? Colors.green : colorPrimary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                podCreated ? 'Solid POD created' : 'Create a Solid POD for your baby',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: podCreated ? Colors.green : colorPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            podCreated
+                ? 'Account created on $appServerUri. Enter the baby\'s WebID below.'
+                : 'Give your baby their own private Solid POD — a personal data store they\'ll own forever.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (!podCreated) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onCreatePod,
+              icon: const Icon(Icons.add_circle_outline, size: 18),
+              label: const Text('Create Solid POD'),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -487,53 +487,70 @@ class _QuickLogPanel extends StatefulWidget {
 class _QuickLogPanelState extends State<_QuickLogPanel> {
   bool _expanded = false;
 
+  static const _pinnedTypes = {
+    LogType.growth,
+    LogType.sleep,
+    LogType.feeding,
+    LogType.milestone,
+  };
+
   @override
   Widget build(BuildContext context) {
     final prefs = context.watch<AppState>().modulePrefs;
-    final options =
+    final all =
         logTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
+    final pinned =
+        logTypeOptions.where((o) => _pinnedTypes.contains(o.type)).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        InkWell(
-          onTap: () => setState(() => _expanded = !_expanded),
-          borderRadius: BorderRadius.circular(radiusMedium),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: colorCard,
-              border: Border.all(color: colorDivider),
+        Row(
+          children: [
+            for (final opt in pinned) ...[
+              Expanded(
+                child: _LogTypeTile(
+                  option: opt,
+                  onTap: () => widget.onLog(opt.type),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
               borderRadius: BorderRadius.circular(radiusMedium),
+              child: Container(
+                width: 52,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: colorCard,
+                  border: Border.all(color: colorDivider),
+                  borderRadius: BorderRadius.circular(radiusMedium),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      color: colorSecondary,
+                      size: 20,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _expanded ? 'Less' : 'More',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: colorSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.add_circle_outline,
-                  color: colorPrimary,
-                  size: 18,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Quick Log',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: colorText,
-                    fontSize: 14,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  color: colorSecondary,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
         if (_expanded) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           GridView.count(
             crossAxisCount: 4,
             childAspectRatio: 1.05,
@@ -542,7 +559,7 @@ class _QuickLogPanelState extends State<_QuickLogPanel> {
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
             children: [
-              for (final opt in options)
+              for (final opt in all)
                 _LogTypeTile(
                   option: opt,
                   onTap: () => widget.onLog(opt.type),

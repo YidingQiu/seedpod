@@ -310,7 +310,9 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                     Text(
                       _isEditing
                           ? 'Edit ${_selectedType!.label} Log'
-                          : 'Quick Log',
+                          : _selectedType != null
+                              ? _selectedType!.label
+                              : 'Quick Log',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 20),

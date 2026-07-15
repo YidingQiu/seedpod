@@ -7,10 +7,10 @@ import 'package:solidpod/solidpod.dart';
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/baby_profile.dart';
 import 'package:seedpod/models/log_entry.dart';
-import 'package:seedpod/models/log_type_option.dart';
+import 'package:seedpod/models/vaccine_reminder.dart';
 import 'package:seedpod/providers/app_state.dart';
+import 'package:seedpod/screens/health_screen.dart';
 import 'package:seedpod/screens/onboarding_screen.dart';
-import 'package:seedpod/services/log_transfer.dart';
 import 'package:seedpod/widgets/quick_log_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool _initialized = false;
+  bool _reminderSnackShown = false;
 
   @override
   void didChangeDependencies() {
@@ -52,20 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _onDataMenu(String action) async {
-    final state = context.read<AppState>();
-    switch (action) {
-      case 'export_json':
-        await LogTransfer.exportJson(context, state.entries);
-      case 'export_csv':
-        await LogTransfer.exportCsv(context, state.entries);
-      case 'import_json':
-        await LogTransfer.importJson(context, state);
-      case 'import_csv':
-        await LogTransfer.importCsv(context, state);
-    }
-  }
-
   void _openEditLog(LogEntry entry) {
     showModalBottomSheet(
       context: context,
@@ -89,16 +76,38 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openVaccines() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const HealthScreen(initialTabIndex: 1),
+      ),
+    );
+  }
+
+  void _showReminderSnackBarOnce(int count) {
+    if (_reminderSnackShown || count == 0) return;
+    _reminderSnackShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$count vaccine reminder${count == 1 ? '' : 's'} '
+            'need${count == 1 ? 's' : ''} your attention.',
+          ),
+        ),
+      );
+    });
+  }
+
   Future<void> _deleteBaby(BabyProfile baby) async {
     final appState = context.read<AppState>();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Remove ${baby.name}?'),
-        content: Text(
-          'This will remove ${baby.name}\'s profile and all associated logs from your Solid POD.\n\n'
-          'Note: the Solid account created for ${baby.name} will NOT be deleted from the server.\n\n'
-          'This action cannot be undone.',
+        title: Text('Delete ${baby.name}?'),
+        content: const Text(
+          'This will remove this baby profile from your Solid POD. This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -147,6 +156,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final profile = state.selectedBaby!;
     final todayLogs = state.todayEntries;
+    final vaccineReminders = state.vaccineReminders;
+    _showReminderSnackBarOnce(vaccineReminders.length);
 
     return Scaffold(
       backgroundColor: colorBg,
@@ -169,45 +180,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  tooltip: 'Import / export data',
-                  onSelected: _onDataMenu,
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'export_json',
-                      child: ListTile(
-                        leading: Icon(Icons.file_download_outlined),
-                        title: Text('Export as JSON'),
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'export_csv',
-                      child: ListTile(
-                        leading: Icon(Icons.table_view_outlined),
-                        title: Text('Export as CSV'),
-                      ),
-                    ),
-                    PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'import_json',
-                      child: ListTile(
-                        leading: Icon(Icons.file_upload_outlined),
-                        title: Text('Import from JSON'),
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'import_csv',
-                      child: ListTile(
-                        leading: Icon(Icons.upload_file_outlined),
-                        title: Text('Import from CSV'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               _BabySelector(
                 babies: state.babies,
                 selectedBabyId: profile.id,
@@ -223,6 +195,13 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 24),
               _QuickActions(onLog: _openQuickLog),
               const SizedBox(height: 24),
+              if (vaccineReminders.isNotEmpty) ...[
+                _VaccinationRemindersCard(
+                  reminders: vaccineReminders,
+                  onTap: _openVaccines,
+                ),
+                const SizedBox(height: 24),
+              ],
               Text(
                 "Today's Log",
                 style: Theme.of(context).textTheme.titleLarge,
@@ -250,6 +229,97 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+class _VaccinationRemindersCard extends StatelessWidget {
+  final List<VaccineReminder> reminders;
+  final VoidCallback onTap;
+
+  const _VaccinationRemindersCard({
+    required this.reminders,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = reminders.take(3).toList();
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(radiusMedium),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colorCard,
+          border: Border.all(color: colorPrimary.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(radiusMedium),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.vaccines_outlined, color: colorPrimary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Vaccination Reminders',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: colorSecondary),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final reminder in visible)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Icon(
+                        _statusIcon(reminder.status),
+                        size: 16,
+                        color: _statusColor(reminder.status),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        reminder.message,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (reminders.length > 3)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: onTap,
+                  child: const Text('View all'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _statusColor(VaccineReminderStatus status) => switch (status) {
+        VaccineReminderStatus.overdue => const Color(0xFFC65D4B),
+        VaccineReminderStatus.dueToday => colorAccent,
+        VaccineReminderStatus.dueSoon => colorSecondary,
+      };
+
+  IconData _statusIcon(VaccineReminderStatus status) => switch (status) {
+        VaccineReminderStatus.overdue => Icons.error_outline,
+        VaccineReminderStatus.dueToday => Icons.today_outlined,
+        VaccineReminderStatus.dueSoon => Icons.schedule,
+      };
 }
 
 class _BabySelector extends StatelessWidget {
@@ -427,19 +497,22 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prefs = context.watch<AppState>().modulePrefs;
-    final actions =
-        logTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
-    if (actions.isEmpty) return const SizedBox.shrink();
-    return GridView.count(
-      crossAxisCount: 5,
-      childAspectRatio: 2.75,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
+    return Row(
       children: [
-        for (final o in actions) _ActionChip(o.icon, o.label, o.type, onLog),
+        Expanded(
+            child:
+                _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog)),
+        const SizedBox(width: 8),
+        Expanded(
+            child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog)),
+        const SizedBox(width: 8),
+        Expanded(
+            child: _ActionChip(
+                Icons.local_cafe, 'Feeding', LogType.feeding, onLog)),
+        const SizedBox(width: 8),
+        Expanded(
+            child:
+                _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog)),
       ],
     );
   }
@@ -639,9 +712,8 @@ class _LogCard extends StatelessWidget {
       case LogType.food:
         final food = e.data['name']?.toString() ?? 'Food';
         final reaction = e.data['reaction']?.toString();
-        if (reaction != null && reaction != 'None') {
+        if (reaction != null && reaction != 'None')
           return '$food (reaction: $reaction)';
-        }
         return 'First food: $food';
       case LogType.teeth:
         return e.data['tooth']?.toString() ?? 'Tooth eruption';

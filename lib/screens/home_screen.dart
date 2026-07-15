@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const QuickLogSheet(),
+      builder: (_) => QuickLogSheet(initialType: initialType),
     );
   }
 
@@ -360,13 +360,20 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _ActionChip(Icons.straighten, 'Growth', onLog)),
+        Expanded(
+            child:
+                _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.bedtime, 'Sleep', onLog)),
+        Expanded(
+            child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.local_cafe, 'Feeding', onLog)),
+        Expanded(
+            child: _ActionChip(
+                Icons.local_cafe, 'Feeding', LogType.feeding, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.star, 'Milestone', onLog)),
+        Expanded(
+            child:
+                _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog)),
       ],
     );
   }

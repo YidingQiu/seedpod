@@ -1,7 +1,6 @@
 <div align="center">
 
-<img src="illustrations/logo/logo.png" alt="SeedPod Logo" width="180"/>
-
+<!-- logo placeholder — replace with final asset -->
 # SeedPod
 
 **A privacy-first baby lifecycle tracker built on the Solid Protocol.**
@@ -20,16 +19,36 @@ Every byte of data belongs to the family — stored encrypted on their own Solid
 
 <table>
 <tr>
-<td width="50%">
+<td width="33%">
 <img src="illustrations/story/01_chaos.png" alt="The chaos every new parent faces"/>
 <p align="center"><em>Every new parent drowns in this — feeding logs, vaccine reminders, childcare waitlists, scattered everywhere.</em></p>
 </td>
-<td width="50%">
+<td width="33%">
+<img src="illustrations/story/02_consolidation.png" alt="Bringing everything into one place"/>
+<p align="center"><em>SeedPod brings it all into one place — owned by the family, not by any app.</em></p>
+</td>
+<td width="33%">
 <img src="illustrations/story/03_sovereignty.png" alt="A data pod prepared for each child"/>
-<p align="center"><em>SeedPod gives every child their own data pod, prepared the moment they are born. Not ours. Theirs.</em></p>
+<p align="center"><em>Every child gets their own data pod, prepared the moment they are born. Not ours. Theirs.</em></p>
+</td>
+</tr>
+<tr>
+<td width="33%">
+<img src="illustrations/story/04_entrusting.png" alt="Sharing care with trusted people"/>
+<p align="center"><em>Share selectively with grandparents, childcare workers, and healthcare providers — on your terms.</em></p>
+</td>
+<td width="33%">
+<img src="illustrations/story/05_peace.png" alt="Family at peace"/>
+<p align="center"><em>Tonight, this family rests easy.</em></p>
+</td>
+<td width="33%">
+<img src="illustrations/story/06_grown_backpack.png" alt="The child grown up, carrying their own pod"/>
+<p align="center"><em>And one day, this same pod — still theirs — goes with them, carried on their own back.</em></p>
 </td>
 </tr>
 </table>
+
+**This is SeedPod. Built on Solid. Yours, from birth.**
 
 ---
 
@@ -282,25 +301,6 @@ git push
 ```
 
 Or just push source changes to `master` — GitHub Actions handles the rest.
-
----
-
-## The Close
-
-<table>
-<tr>
-<td width="50%">
-<img src="illustrations/story/05_peace.png" alt="Family at peace"/>
-<p align="center"><em>Tonight, this family rests easy.</em></p>
-</td>
-<td width="50%">
-<img src="illustrations/story/06_grown_backpack.png" alt="The child grown up, carrying their own pod"/>
-<p align="center"><em>And one day, this same pod — still theirs — goes with them, carried on their own back.</em></p>
-</td>
-</tr>
-</table>
-
-**This is SeedPod. Built on Solid. Yours, from birth.**
 
 ---
 

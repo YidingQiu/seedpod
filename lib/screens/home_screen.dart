@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:solidpod/solidpod.dart';
 
 import 'package:seedpod/constants/theme.dart';
+import 'package:seedpod/models/baby_profile.dart';
 import 'package:seedpod/models/log_entry.dart';
 import 'package:seedpod/providers/app_state.dart';
 import 'package:seedpod/screens/onboarding_screen.dart';
@@ -29,14 +30,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _initLoad() async {
-    final state = context.read<AppState>();
-    await state.loadModulePrefs();
-    if (state.profileState == LoadState.idle) {
-      await state.loadProfile();
+  Future<void> _initLoad([AppState? state]) async {
+    final appState = state ?? context.read<AppState>();
+    await appState.loadModulePrefs();
+    if (appState.profileState == LoadState.idle) {
+      await appState.loadProfile();
     }
-    if (state.entriesState == LoadState.idle && state.hasProfile) {
-      await state.loadEntries();
+    if (appState.entriesState == LoadState.idle && appState.hasProfile) {
+      await appState.loadEntries();
     }
   }
 
@@ -46,6 +47,56 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const QuickLogSheet(),
+    );
+  }
+
+  Future<void> _openEditProfile(BabyProfile profile) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OnboardingScreen.editing(initialProfile: profile),
+      ),
+    );
+  }
+
+  Future<void> _deleteProfile() async {
+    final appState = context.read<AppState>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete baby profile?'),
+        content: const Text(
+          'This will remove the baby profile from your Solid POD. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final ok = await appState.deleteProfile();
+    if (!mounted) return;
+
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to delete profile. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Baby profile deleted.')),
     );
   }
 
@@ -85,7 +136,11 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _BabyCard(profile: profile),
+              _BabyCard(
+                profile: profile,
+                onEdit: () => _openEditProfile(profile),
+                onDelete: _deleteProfile,
+              ),
               const SizedBox(height: 24),
               _QuickActions(onLog: _openQuickLog),
               const SizedBox(height: 24),
@@ -115,8 +170,15 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _BabyCard extends StatelessWidget {
-  final dynamic profile;
-  const _BabyCard({required this.profile});
+  final BabyProfile profile;
+  final VoidCallback onEdit;
+  final Future<void> Function() onDelete;
+
+  const _BabyCard({
+    required this.profile,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +198,7 @@ class _BabyCard extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.25),
+              color: Colors.white.withValues(alpha: 0.25),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.child_care, size: 36, color: Colors.white),
@@ -158,7 +220,7 @@ class _BabyCard extends StatelessWidget {
                 Text(
                   profile.ageLabel,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 14,
                   ),
                 ),
@@ -166,6 +228,21 @@ class _BabyCard extends StatelessWidget {
                 _PodPill(),
               ],
             ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: onEdit,
+                tooltip: 'Edit baby profile',
+                icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
+              ),
+              IconButton(
+                onPressed: () => onDelete(),
+                tooltip: 'Delete baby profile',
+                icon: const Icon(Icons.delete_outline, color: Colors.white),
+              ),
+            ],
           ),
         ],
       ),
@@ -199,7 +276,7 @@ class _PodPillState extends State<_PodPill> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -352,7 +429,7 @@ class _LogCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: colorPrimary.withOpacity(0.1),
+              color: colorPrimary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(

@@ -54,6 +54,24 @@ class AppState extends ChangeNotifier {
     return ok;
   }
 
+  Future<bool> updateProfile(BabyProfile profile) async {
+    final ok = await _pod.writeBabyProfile(profile);
+    if (ok) {
+      _profile = profile;
+      notifyListeners();
+    }
+    return ok;
+  }
+
+  Future<bool> deleteProfile() async {
+    final ok = await _pod.deleteBabyProfile();
+    if (ok) {
+      _profile = null;
+      notifyListeners();
+    }
+    return ok;
+  }
+
   Future<void> loadEntries() async {
     _entriesState = LoadState.loading;
     notifyListeners();

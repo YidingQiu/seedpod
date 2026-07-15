@@ -8,6 +8,8 @@ import 'package:seedpod/models/childcare_entry.dart';
 import 'package:seedpod/models/log_entry.dart';
 
 class PodService {
+  // ─── baby profiles ─────────────────────────────────────────────────────────
+
   Future<void> createBaby(BabyProfile baby) async {
     await _writeBaby(baby, overwrite: false);
   }
@@ -103,38 +105,69 @@ class PodService {
     if (!entries.any((entry) => entry.babyId.isEmpty)) return;
     final migrated = entries
         .map(
-          (entry) =>
-              entry.babyId.isEmpty ? entry.copyWith(babyId: babyId) : entry,
+          (e) => e.babyId.isEmpty ? e.copyWith(babyId: babyId) : e,
         )
         .toList();
-    await _writeAllLogEntries(migrated);
+    await writeAllLogEntries(migrated);
   }
 
+  // ─── log entries — per-type storage ────────────────────────────────────────
+
   Future<List<LogEntry>> readAllLogEntries() async {
+    final entries = <LogEntry>[];
+    final seenIds = <String>{};
+
+    // Read per-type files.
+    for (final type in LogType.values) {
+      try {
+        final content = await readPod(LogEntry.fileNameForType(type));
+        for (final e in LogEntry.listFromJsonString(content)) {
+          if (seenIds.add(e.id)) entries.add(e);
+        }
+      } on ResourceNotExistException {
+        // no entries of this type yet
+      } catch (e) {
+        debugPrint('readAllLogEntries(${type.name}) error: $e');
+      }
+    }
+
+    // Migrate from legacy monolithic file if present.
     try {
       final content = await readPod(LogEntry.allEntriesFileName);
-      final entries = LogEntry.listFromJsonString(content);
-      entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      return entries;
+      final legacy = LogEntry.listFromJsonString(content);
+      if (legacy.isNotEmpty) {
+        await _migrateToPerTypeFiles(legacy);
+        for (final e in legacy) {
+          if (seenIds.add(e.id)) entries.add(e);
+        }
+      }
     } on ResourceNotExistException {
-      return [];
+      // no legacy file
     } catch (e) {
-      debugPrint('readAllLogEntries error: $e');
-      return [];
+      debugPrint('readAllLogEntries legacy error: $e');
     }
+
+    entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return entries;
   }
 
   Future<bool> writeLogEntry(LogEntry entry) async {
     try {
+      final fileName = LogEntry.fileNameForType(entry.type);
       List<LogEntry> existing = [];
       try {
-        final content = await readPod(LogEntry.allEntriesFileName);
+        final content = await readPod(fileName);
         existing = LogEntry.listFromJsonString(content);
       } on ResourceNotExistException {
-        // first entry ever
+        // first entry of this type
       }
-      final updated = [entry, ...existing];
-      await _writeAllLogEntries(updated);
+      final updated = [entry, ...existing.where((e) => e.id != entry.id)];
+      await writePod(
+        fileName,
+        LogEntry.listToJsonString(updated),
+        encrypted: true,
+        overwrite: true,
+      );
       return true;
     } catch (e) {
       debugPrint('writeLogEntry error: $e');
@@ -144,15 +177,20 @@ class PodService {
 
   Future<bool> updateLog(LogEntry entry) async {
     try {
-      final content = await readPod(LogEntry.allEntriesFileName);
+      final fileName = LogEntry.fileNameForType(entry.type);
+      final content = await readPod(fileName);
       final existing = LogEntry.listFromJsonString(content);
       final index = existing.indexWhere(
         (item) => item.id == entry.id && item.babyId == entry.babyId,
       );
       if (index == -1) return false;
-
       final updated = [...existing]..[index] = entry;
-      await _writeAllLogEntries(updated);
+      await writePod(
+        fileName,
+        LogEntry.listToJsonString(updated),
+        encrypted: true,
+        overwrite: true,
+      );
       return true;
     } catch (e) {
       debugPrint('updateLog error: $e');
@@ -161,21 +199,48 @@ class PodService {
   }
 
   Future<bool> writeAllLogEntries(List<LogEntry> entries) async {
-    try {
-      await _writeAllLogEntries(entries);
-      return true;
-    } catch (e) {
-      debugPrint('writeAllLogEntries error: $e');
-      return false;
+    final byType = <LogType, List<LogEntry>>{};
+    for (final e in entries) {
+      byType.putIfAbsent(e.type, () => []).add(e);
     }
+    var ok = true;
+    for (final kv in byType.entries) {
+      try {
+        await writePod(
+          LogEntry.fileNameForType(kv.key),
+          LogEntry.listToJsonString(kv.value),
+          encrypted: true,
+          overwrite: true,
+        );
+      } catch (e) {
+        debugPrint('writeAllLogEntries(${kv.key.name}) error: $e');
+        ok = false;
+      }
+    }
+    return ok;
   }
 
-  Future<void> _writeAllLogEntries(List<LogEntry> entries) => writePod(
-        LogEntry.allEntriesFileName,
-        LogEntry.listToJsonString(entries),
-        encrypted: true,
-        overwrite: true,
-      );
+  Future<void> _migrateToPerTypeFiles(List<LogEntry> legacy) async {
+    final byType = <LogType, List<LogEntry>>{};
+    for (final e in legacy) {
+      byType.putIfAbsent(e.type, () => []).add(e);
+    }
+    for (final kv in byType.entries) {
+      try {
+        await writePod(
+          LogEntry.fileNameForType(kv.key),
+          LogEntry.listToJsonString(kv.value),
+          encrypted: true,
+          overwrite: true,
+        );
+      } catch (e) {
+        debugPrint('migrate(${kv.key.name}) error: $e');
+      }
+    }
+    debugPrint('PodService: migrated ${legacy.length} entries to per-type files');
+  }
+
+  // ─── childcare entries ─────────────────────────────────────────────────────
 
   Future<List<ChildcareEntry>> readChildcareEntries() async {
     try {

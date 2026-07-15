@@ -294,6 +294,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ],
                     ),
                     const SizedBox(height: 40),
+                    if (!widget.isEditing && !_podCreated)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          'Create a Solid POD above before continuing.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: colorSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

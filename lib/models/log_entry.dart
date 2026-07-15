@@ -108,6 +108,9 @@ class LogEntry {
   });
 
   static const String allEntriesFileName = 'log_entries.json.enc.ttl';
+  static const String logsDirectory = 'logs';
+  static String fileNameForType(LogType type) =>
+      '$logsDirectory/${type.name}.json.enc.ttl';
 
   static List<LogEntry> listFromJsonString(String s) {
     try {

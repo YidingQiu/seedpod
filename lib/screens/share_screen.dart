@@ -6,8 +6,64 @@ import 'package:solidpod/solidpod.dart';
 import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/constants/theme.dart';
+import 'package:seedpod/models/baby_profile.dart';
 import 'package:seedpod/models/childcare_entry.dart';
 import 'package:seedpod/models/log_entry.dart';
+
+// ─── data model ───────────────────────────────────────────────────────────────
+
+class _ResourceItem {
+  final String label;
+  final String description;
+  final IconData icon;
+  final String url;
+  bool selected;
+
+  _ResourceItem({
+    required this.label,
+    required this.description,
+    required this.icon,
+    required this.url,
+    this.selected = true,
+  });
+}
+
+class _ResourceGroup {
+  final String label;
+  final String description;
+  final IconData icon;
+  final List<_ResourceItem> items;
+  bool expanded;
+
+  _ResourceGroup({
+    required this.label,
+    required this.description,
+    required this.icon,
+    required this.items,
+    this.expanded = false,
+  });
+
+  bool get allSelected => items.every((i) => i.selected);
+  bool get noneSelected => items.every((i) => !i.selected);
+  bool get someSelected => !allSelected && !noneSelected;
+
+  void selectAll() {
+    for (final i in items) {
+      i.selected = true;
+    }
+  }
+
+  void deselectAll() {
+    for (final i in items) {
+      i.selected = false;
+    }
+  }
+
+  List<String> get selectedUrls =>
+      items.where((i) => i.selected).map((i) => i.url).toList();
+}
+
+// ─── screen ───────────────────────────────────────────────────────────────────
 
 class ShareScreen extends StatefulWidget {
   const ShareScreen({super.key});
@@ -19,12 +75,28 @@ class ShareScreen extends StatefulWidget {
 class _ShareScreenState extends State<ShareScreen> {
   String? _webId;
   bool _loadingUrls = true;
-  final Map<String, String> _urlByLabel = {};
-  final Map<String, String> _descByLabel = {};
-  Set<String> _selectedUrls = {};
+  List<_ResourceGroup> _groups = [];
   bool _showGrant = false;
   List<String> _grantUrls = [];
+  Map<String, String> _titleData = {};
   Key _grantKey = UniqueKey();
+
+  static const _logTypeInfo = <LogType, (IconData, String)>{
+    LogType.feeding: (Icons.local_cafe, 'Feeding records'),
+    LogType.sleep: (Icons.bedtime, 'Sleep records'),
+    LogType.growth: (Icons.straighten, 'Growth measurements'),
+    LogType.nappy: (Icons.baby_changing_station, 'Nappy changes'),
+    LogType.milestone: (Icons.star, 'Milestones'),
+    LogType.health: (Icons.favorite, 'Health notes'),
+    LogType.medication: (Icons.medication, 'Medications'),
+    LogType.food: (Icons.restaurant, 'Solid foods'),
+    LogType.teeth: (Icons.mood, 'Teeth'),
+    LogType.appointment: (Icons.local_hospital, 'Doctor appointments'),
+    LogType.sleep_training: (Icons.nightlight, 'Sleep training'),
+    LogType.memory: (Icons.auto_stories, 'Memories'),
+    LogType.note: (Icons.edit_note, 'Notes'),
+    LogType.environment: (Icons.wb_sunny, 'Environment'),
+  };
 
   @override
   void initState() {
@@ -42,19 +114,67 @@ class _ShareScreenState extends State<ShareScreen> {
     }
     try {
       final dataPath = await getDataDirPath();
-      final logUrl =
-          await getFileUrl('$dataPath/${LogEntry.allEntriesFileName}');
+
+      // Per-type log files
+      final logItems = <_ResourceItem>[];
+      for (final entry in _logTypeInfo.entries) {
+        final type = entry.key;
+        final (icon, desc) = entry.value;
+        final url = await getFileUrl(
+          '$dataPath/${LogEntry.fileNameForType(type)}',
+        );
+        logItems.add(_ResourceItem(
+          label: type.label,
+          description: desc,
+          icon: icon,
+          url: url,
+        ));
+      }
+
       final childcareUrl =
           await getFileUrl('$dataPath/${ChildcareEntry.fileName}');
+      final babyUrl =
+          await getFileUrl('$dataPath/${BabyProfile.allProfilesFileName}');
+
       if (!mounted) return;
       setState(() {
-        _urlByLabel['Activity Log'] = logUrl;
-        _descByLabel['Activity Log'] =
-            'Feeding, sleep, nappy, growth and all other log entries';
-        _urlByLabel['Childcare Waitlist'] = childcareUrl;
-        _descByLabel['Childcare Waitlist'] =
-            'Waitlist applications and enrolment status for childcare centres';
-        _selectedUrls = {logUrl, childcareUrl};
+        _groups = [
+          _ResourceGroup(
+            label: 'Activity Log',
+            description: 'Daily tracking data',
+            icon: Icons.book_outlined,
+            items: logItems,
+            expanded: true,
+          ),
+          _ResourceGroup(
+            label: 'Childcare Waitlist',
+            description: 'Centre applications and enrolment status',
+            icon: Icons.school_outlined,
+            items: [
+              _ResourceItem(
+                label: 'Waitlist data',
+                description: 'Centre names, dates, and application status',
+                icon: Icons.assignment_outlined,
+                url: childcareUrl,
+              ),
+            ],
+            expanded: false,
+          ),
+          _ResourceGroup(
+            label: 'Baby Profile',
+            description: 'Basic identity information',
+            icon: Icons.child_care_outlined,
+            items: [
+              _ResourceItem(
+                label: 'Profile',
+                description: 'Name, date of birth, gender',
+                icon: Icons.badge_outlined,
+                url: babyUrl,
+              ),
+            ],
+            expanded: false,
+          ),
+        ];
         _loadingUrls = false;
       });
     } catch (e) {
@@ -70,10 +190,8 @@ class _ShareScreenState extends State<ShareScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Share Access',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
+          Text('Share Access',
+              style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 6),
           Text(
             'Give caregivers and family access to your baby\'s data — stored privately on your Solid POD.',
@@ -117,41 +235,53 @@ class _ShareScreenState extends State<ShareScreen> {
       );
     }
 
+    final anySelected = _groups.any((g) => g.selectedUrls.isNotEmpty);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Manage Permissions',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text('Manage Permissions',
+            style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 4),
         Text(
-          'Choose which parts of your data to share, then enter a caregiver\'s WebID to grant them access.',
+          'Choose which data to share, then enter a caregiver\'s WebID. Each row is a separate file on your POD.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: 16),
 
-        // Resource checkboxes
-        ..._urlByLabel.entries.map((entry) {
-          final label = entry.key;
-          final url = entry.value;
-          final checked = _selectedUrls.contains(url);
-          return _ResourceCheckTile(
-            label: label,
-            description: _descByLabel[label] ?? '',
-            checked: checked,
-            onChanged: (v) {
-              setState(() {
-                if (v == true) {
-                  _selectedUrls.add(url);
-                } else {
-                  _selectedUrls.remove(url);
-                }
-                _showGrant = false;
-              });
-            },
-          );
-        }),
+        // Tree
+        Container(
+          decoration: BoxDecoration(
+            color: colorCard,
+            border: Border.all(color: colorDivider),
+            borderRadius: BorderRadius.circular(radiusMedium),
+          ),
+          child: Column(
+            children: _groups.asMap().entries.map((e) {
+              final i = e.key;
+              final group = e.value;
+              final isLast = i == _groups.length - 1;
+              return _GroupTile(
+                group: group,
+                isLast: isLast,
+                onGroupToggle: () => setState(() {
+                  if (group.allSelected) {
+                    group.deselectAll();
+                  } else {
+                    group.selectAll();
+                  }
+                  _showGrant = false;
+                }),
+                onItemToggle: (item) => setState(() {
+                  item.selected = !item.selected;
+                  _showGrant = false;
+                }),
+                onToggleExpand: () =>
+                    setState(() => group.expanded = !group.expanded),
+              );
+            }).toList(),
+          ),
+        ),
 
         const SizedBox(height: 16),
 
@@ -159,15 +289,21 @@ class _ShareScreenState extends State<ShareScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _selectedUrls.isEmpty
-                  ? null
-                  : () {
+              onPressed: anySelected
+                  ? () {
+                      final allSelected = _groups
+                          .expand((g) => g.items.where((i) => i.selected))
+                          .toList();
                       setState(() {
                         _showGrant = true;
-                        _grantUrls = _selectedUrls.toList();
+                        _grantUrls = allSelected.map((i) => i.url).toList();
+                        _titleData = {
+                          for (final i in allSelected) i.url: i.label,
+                        };
                         _grantKey = UniqueKey();
                       });
-                    },
+                    }
+                  : null,
               icon: const Icon(Icons.manage_accounts_outlined),
               label: const Text('Set Permissions'),
             ),
@@ -183,9 +319,7 @@ class _ShareScreenState extends State<ShareScreen> {
             key: _grantKey,
             showAppBar: false,
             resourceNames: _grantUrls,
-            titleData: {
-              for (final e in _urlByLabel.entries) e.value: e.key,
-            },
+            titleData: _titleData,
           ),
         ],
 
@@ -195,55 +329,191 @@ class _ShareScreenState extends State<ShareScreen> {
   }
 }
 
-class _ResourceCheckTile extends StatelessWidget {
-  final String label;
-  final String description;
-  final bool checked;
-  final ValueChanged<bool?> onChanged;
+// ─── group tile ───────────────────────────────────────────────────────────────
 
-  const _ResourceCheckTile({
-    required this.label,
-    required this.description,
-    required this.checked,
-    required this.onChanged,
+class _GroupTile extends StatelessWidget {
+  final _ResourceGroup group;
+  final bool isLast;
+  final VoidCallback onGroupToggle;
+  final ValueChanged<_ResourceItem> onItemToggle;
+  final VoidCallback onToggleExpand;
+
+  const _GroupTile({
+    required this.group,
+    required this.isLast,
+    required this.onGroupToggle,
+    required this.onItemToggle,
+    required this.onToggleExpand,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: colorCard,
-        border: Border.all(
-          color: checked ? colorPrimary.withValues(alpha:0.35) : colorDivider,
-        ),
-        borderRadius: BorderRadius.circular(radiusMedium),
-      ),
-      child: CheckboxListTile(
-        title: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Text(
-            description,
-            style: const TextStyle(
-              color: colorSecondary,
-              fontSize: 12,
-              height: 1.3,
+    return Column(
+      children: [
+        // Group header row
+        InkWell(
+          onTap: onToggleExpand,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Checkbox(
+                    value: group.someSelected ? null : group.allSelected,
+                    tristate: true,
+                    onChanged: (_) => onGroupToggle(),
+                    activeColor: colorPrimary,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Icon(group.icon, size: 18, color: colorPrimary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        group.label,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: colorText,
+                        ),
+                      ),
+                      Text(
+                        group.description,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: colorSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  group.expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                  color: colorSecondary,
+                ),
+              ],
             ),
           ),
         ),
-        value: checked,
-        onChanged: onChanged,
-        activeColor: colorPrimary,
-        controlAffinity: ListTileControlAffinity.leading,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+
+        // Children
+        if (group.expanded)
+          ...group.items.asMap().entries.map((e) {
+            final i = e.key;
+            final item = e.value;
+            final isItemLast = i == group.items.length - 1;
+            return _ItemTile(
+              item: item,
+              isLast: isItemLast,
+              onToggle: () => onItemToggle(item),
+            );
+          }),
+
+        if (!isLast) const Divider(height: 1, color: colorDivider),
+      ],
+    );
+  }
+}
+
+class _ItemTile extends StatelessWidget {
+  final _ResourceItem item;
+  final bool isLast;
+  final VoidCallback onToggle;
+
+  const _ItemTile({
+    required this.item,
+    required this.isLast,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onToggle,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 20, right: 12, top: 6, bottom: 6),
+        child: Row(
+          children: [
+            // Tree connector
+            SizedBox(
+              width: 16,
+              child: CustomPaint(
+                size: const Size(16, 32),
+                painter: _ConnectorPainter(isLast: isLast),
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: item.selected,
+                onChanged: (_) => onToggle(),
+                activeColor: colorPrimary,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(item.icon, size: 15, color: colorSecondary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: item.selected ? colorText : colorSecondary,
+                    ),
+                  ),
+                  Text(
+                    item.description,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: colorSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
+class _ConnectorPainter extends CustomPainter {
+  final bool isLast;
+  const _ConnectorPainter({required this.isLast});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = colorDivider
+      ..strokeWidth = 1.5;
+    final x = size.width * 0.5;
+    final midY = size.height * 0.5;
+    canvas.drawLine(Offset(x, 0), Offset(x, isLast ? midY : size.height), paint);
+    canvas.drawLine(Offset(x, midY), Offset(size.width, midY), paint);
+  }
+
+  @override
+  bool shouldRepaint(_ConnectorPainter old) => old.isLast != isLast;
+}
+
+// ─── how it works card ────────────────────────────────────────────────────────
 
 class _HowItWorksCard extends StatefulWidget {
   @override
@@ -259,13 +529,13 @@ class _HowItWorksCardState extends State<_HowItWorksCard> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            colorPrimary.withValues(alpha:0.08),
-            colorPrimary.withValues(alpha:0.03),
+            colorPrimary.withValues(alpha: 0.08),
+            colorPrimary.withValues(alpha: 0.03),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: colorPrimary.withValues(alpha:0.2)),
+        border: Border.all(color: colorPrimary.withValues(alpha: 0.2)),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -304,42 +574,35 @@ class _HowItWorksCardState extends State<_HowItWorksCard> {
               padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Column(
                 children: [
-                  const _StepRow(
+                  _StepRow(
                     step: '1',
-                    title: 'Share your WebID',
+                    title: 'Select what to share',
                     body:
-                        'Your WebID is your Solid identity. Copy it and send it to the caregiver so they know who you are.',
+                        'Use the tree to choose which data types to share. Each leaf is a separate file on your POD — real per-type access control.',
                   ),
-                  const SizedBox(height: 10),
-                  const _StepRow(
+                  SizedBox(height: 10),
+                  _StepRow(
                     step: '2',
-                    title: 'They get a WebID too',
+                    title: 'Enter the caregiver\'s WebID',
                     body:
-                        'The other person creates a free Solid POD at solidcommunity.au and gets their own WebID.',
+                        'They need a free Solid POD at solidcommunity.au. Share your own WebID so they know who to expect.',
                   ),
-                  const SizedBox(height: 10),
-                  const _StepRow(
+                  SizedBox(height: 10),
+                  _StepRow(
                     step: '3',
-                    title: 'Select resources and set permissions',
+                    title: 'Choose read or write access',
                     body:
-                        'Tick the data you want to share, press Set Permissions, then enter their WebID and choose read or write access.',
+                        'Read-only lets them view data. Write access lets them add entries too. Revoke at any time.',
                   ),
-                  const SizedBox(height: 10),
-                  const _StepRow(
-                    step: '4',
-                    title: 'They log in and view your data',
-                    body:
-                        'The caregiver opens SeedPod, logs in with their account, and can now see your baby\'s shared data. You can revoke access any time.',
-                  ),
-                  const SizedBox(height: 14),
-                  const Wrap(
+                  SizedBox(height: 14),
+                  Wrap(
                     spacing: 8,
                     runSpacing: 6,
                     children: [
                       _AccessChip(Icons.visibility_outlined, 'Read-only'),
                       _AccessChip(Icons.edit_outlined, 'Write access'),
                       _AccessChip(Icons.block_outlined, 'Revocable'),
-                      _AccessChip(Icons.lock_outlined, 'End-to-end encrypted'),
+                      _AccessChip(Icons.lock_outlined, 'Encrypted'),
                     ],
                   ),
                 ],
@@ -386,22 +649,14 @@ class _StepRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: colorText,
-                ),
-              ),
-              Text(
-                body,
-                style: const TextStyle(
-                  color: colorSecondary,
-                  fontSize: 12,
-                  height: 1.4,
-                ),
-              ),
+              Text(title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: colorText)),
+              Text(body,
+                  style: const TextStyle(
+                      color: colorSecondary, fontSize: 12, height: 1.4)),
             ],
           ),
         ),
@@ -409,6 +664,8 @@ class _StepRow extends StatelessWidget {
     );
   }
 }
+
+// ─── your webid card ─────────────────────────────────────────────────────────
 
 class _YourWebIdCard extends StatelessWidget {
   final String webId;
@@ -433,10 +690,7 @@ class _YourWebIdCard extends StatelessWidget {
               Text(
                 'Your WebID',
                 style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: colorText,
-                ),
+                    fontWeight: FontWeight.w600, fontSize: 14, color: colorText),
               ),
             ],
           ),
@@ -459,10 +713,7 @@ class _YourWebIdCard extends StatelessWidget {
                   child: Text(
                     webId,
                     style: const TextStyle(
-                      fontSize: 12,
-                      color: colorText,
-                      fontFamily: 'monospace',
-                    ),
+                        fontSize: 12, color: colorText, fontFamily: 'monospace'),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -493,6 +744,8 @@ class _YourWebIdCard extends StatelessWidget {
   }
 }
 
+// ─── access chip ─────────────────────────────────────────────────────────────
+
 class _AccessChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -504,7 +757,7 @@ class _AccessChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: colorPrimary.withValues(alpha:0.3)),
+        border: Border.all(color: colorPrimary.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -512,10 +765,8 @@ class _AccessChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: colorPrimary),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(color: colorPrimary, fontSize: 12),
-          ),
+          Text(label,
+              style: const TextStyle(color: colorPrimary, fontSize: 12)),
         ],
       ),
     );

@@ -183,13 +183,53 @@ Baby selector dropdown + Add Baby button. Baby profile card (name, age, POD serv
 
 ### Home (planned — 24h Dashboard)
 
-Replace "Today's Log" header section with a 24-hour summary dashboard:
+Replace the current "Today's Log" scrollable card list with a proper status dashboard. Proposed by a daily caregiver: parents need to see the baby's current status at a glance, not scroll a log. This is the key differentiator from a phone memo app.
 
-- **Three stat cards**: total milk (ml), nappy count, total sleep (h) — all computed from log entries in the past 24 rolling hours
-- **Feeding timeline bar**: hourly buckets across 24h rendered as a row of `Container` widgets, no chart package needed
-- **Compact log list** below the cards (scrollable, keeps the detail)
+**Layout (top to bottom):**
 
-This was proposed based on user feedback: parents want to see the baby's current status at a glance, not just a chronological list. The dashboard makes SeedPod more useful than a phone memo app. Implementation is pending mock data from the team.
+```
+┌─────────────────────────────────────────┐
+│  [Baby selector ▼]        [+ Add Baby] │
+│  ┌─────────────────────────────────────┐│
+│  │  Emma · 4 months old  · 🔒 server  ││
+│  └─────────────────────────────────────┘│
+│                                         │
+│  PAST 24 HOURS                          │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐│
+│  │  🍼      │ │  👶      │ │  😴      ││
+│  │  480 ml  │ │  3 times │ │  9.5 h   ││
+│  │  Feeding │ │  Nappy   │ │  Sleep   ││
+│  └──────────┘ └──────────┘ └──────────┘│
+│                                         │
+│  [Quick Log grid]                       │
+│                                         │
+│  ● 13:00  Sleep — 2h 15m               │
+│                          Today · 5 entries  View all → │
+└─────────────────────────────────────────┘
+```
+
+**Three stat cards** — rolling 24h window (not calendar day, so midnight does not reset a sleeping baby's numbers):
+
+| Card | Source | Formula |
+|---|---|---|
+| Feeding (ml) | `LogType.feeding`, `data['amount_ml']` | Sum of amounts in past 24h |
+| Nappy | `LogType.nappy` | Count of entries in past 24h |
+| Sleep (h) | `LogType.sleep`, `data['start']` + `data['end']` | Sum of durations in past 24h |
+
+Each card shows "No data" gracefully when the entry list is empty.
+
+**Recent log footer** — one line only, the single most recent log entry shown as a small pill:
+
+```
+● 13:00  Sleep — 2h 15m        Today · 5 entries   View all →
+```
+
+- Left: icon + time + one-line summary of the latest entry
+- Right: entry count for today + "View all →" tapping navigates to the Timeline screen
+
+The full log list is removed from the home screen entirely. Timeline already handles detailed history.
+
+**Implementation note:** No chart packages needed. The three stat cards are plain `Container` widgets. Stat computation is a simple fold over `state.entries` filtered to the past 24h. Implementation is pending mock data from the team (Clarissa).
 
 ### Quick Log
 
@@ -273,7 +313,7 @@ Local `flutter run -d chrome` works for UI development but cannot complete Solid
 
 | Feature | Notes |
 |---|---|
-| 24h dashboard | Designed (see Home planned section above); pending mock data |
+| 24h dashboard | Designed (see Home planned section above); pending mock data from Clarissa; no code changes yet |
 | Development Checklist screen | Module exists; falls back to Quick Log note |
 | Government Benefits screen | Module exists; no dedicated screen |
 | Birth Admin checklist screen | Module exists; no dedicated screen |

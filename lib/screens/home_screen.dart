@@ -11,6 +11,7 @@ import 'package:seedpod/models/vaccine_reminder.dart';
 import 'package:seedpod/providers/app_state.dart';
 import 'package:seedpod/screens/health_screen.dart';
 import 'package:seedpod/screens/onboarding_screen.dart';
+import 'package:seedpod/screens/timeline_screen.dart';
 import 'package:seedpod/widgets/quick_log_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -53,15 +54,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openEditLog(LogEntry entry) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => QuickLogSheet(entry: entry),
-    );
-  }
-
   Future<void> _openEditProfile(BabyProfile profile) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -73,6 +65,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openAddBaby() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+    );
+  }
+
+  void _openTimeline() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TimelineScreen()),
     );
   }
 
@@ -155,7 +153,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final profile = state.selectedBaby!;
-    final todayLogs = state.todayEntries;
     final vaccineReminders = state.vaccineReminders;
     _showReminderSnackBarOnce(vaccineReminders.length);
 
@@ -193,35 +190,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 onDelete: () => _deleteBaby(profile),
               ),
               const SizedBox(height: 24),
+              _StatCards(entries: state.entries),
+              const SizedBox(height: 16),
               _QuickActions(onLog: _openQuickLog),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               if (vaccineReminders.isNotEmpty) ...[
                 _VaccinationRemindersCard(
                   reminders: vaccineReminders,
                   onTap: _openVaccines,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
               ],
-              Text(
-                "Today's Log",
-                style: Theme.of(context).textTheme.titleLarge,
+              _RecentLogFooter(
+                entries: state.entries,
+                entriesState: state.entriesState,
+                onViewAll: _openTimeline,
               ),
-              const SizedBox(height: 12),
-              if (state.entriesState == LoadState.loading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (todayLogs.isEmpty)
-                _EmptyToday(onLog: _openQuickLog)
-              else
-                for (final entry in todayLogs)
-                  _LogCard(
-                    entry: entry,
-                    onEdit: () => _openEditLog(entry),
-                  ),
               const SizedBox(height: 80),
             ],
           ),
@@ -500,19 +484,20 @@ class _QuickActions extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-            child:
-                _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog)),
+          child: _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog),
+        ),
         const SizedBox(width: 8),
         Expanded(
-            child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog)),
+          child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog),
+        ),
         const SizedBox(width: 8),
         Expanded(
-            child: _ActionChip(
-                Icons.local_cafe, 'Feeding', LogType.feeding, onLog)),
+          child: _ActionChip(Icons.local_cafe, 'Feeding', LogType.feeding, onLog),
+        ),
         const SizedBox(width: 8),
         Expanded(
-            child:
-                _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog)),
+          child: _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog),
+        ),
       ],
     );
   }
@@ -554,14 +539,99 @@ class _ActionChip extends StatelessWidget {
   }
 }
 
-class _EmptyToday extends StatelessWidget {
-  final VoidCallback onLog;
-  const _EmptyToday({required this.onLog});
+class _StatCards extends StatelessWidget {
+  final List<LogEntry> entries;
+  const _StatCards({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+    final past24 = entries.where((e) => e.timestamp.isAfter(cutoff)).toList();
+
+    double feedingMl = 0;
+    for (final e in past24.where((e) => e.type == LogType.feeding)) {
+      final amt = e.data['amount_ml'];
+      if (amt != null) feedingMl += (amt as num).toDouble();
+    }
+
+    final nappyCount = past24.where((e) => e.type == LogType.nappy).length;
+
+    double sleepHours = 0;
+    for (final e in past24.where((e) => e.type == LogType.sleep)) {
+      final start = e.data['start'];
+      final end = e.data['end'];
+      if (start != null && end != null) {
+        try {
+          final s = DateTime.parse(start.toString());
+          final en = DateTime.parse(end.toString());
+          final mins = en.difference(s).inMinutes;
+          if (mins > 0) sleepHours += mins / 60.0;
+        } catch (_) {}
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'PAST 24 HOURS',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: colorSecondary,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                icon: Icons.local_cafe,
+                label: 'Feeding',
+                value: feedingMl > 0 ? '${feedingMl.toInt()} ml' : '—',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.baby_changing_station,
+                label: 'Nappy',
+                value: nappyCount > 0 ? '$nappyCount times' : '—',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _StatCard(
+                icon: Icons.bedtime,
+                label: 'Sleep',
+                value: sleepHours > 0
+                    ? '${sleepHours.toStringAsFixed(1)} h'
+                    : '—',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
         color: colorCard,
         border: Border.all(color: colorDivider),
@@ -569,23 +639,20 @@ class _EmptyToday extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.wb_sunny_outlined, size: 40, color: colorSecondary),
-          const SizedBox(height: 12),
+          Icon(icon, color: colorPrimary, size: 22),
+          const SizedBox(height: 8),
           Text(
-            'No entries yet today',
-            style: Theme.of(context).textTheme.titleMedium,
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: colorText,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Tap Quick Log to record feeding, sleep, growth and more.',
-            style: Theme.of(context).textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: onLog,
-            icon: const Icon(Icons.add),
-            label: const Text('Add First Log'),
+            label,
+            style: const TextStyle(fontSize: 11, color: colorSecondary),
           ),
         ],
       ),
@@ -593,10 +660,16 @@ class _EmptyToday extends StatelessWidget {
   }
 }
 
-class _LogCard extends StatelessWidget {
-  final LogEntry entry;
-  final VoidCallback onEdit;
-  const _LogCard({required this.entry, required this.onEdit});
+class _RecentLogFooter extends StatelessWidget {
+  final List<LogEntry> entries;
+  final LoadState entriesState;
+  final VoidCallback onViewAll;
+
+  const _RecentLogFooter({
+    required this.entries,
+    required this.entriesState,
+    required this.onViewAll,
+  });
 
   static const Map<LogType, IconData> _icons = {
     LogType.growth: Icons.straighten,
@@ -618,12 +691,29 @@ class _LogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hour = entry.timestamp.hour.toString().padLeft(2, '0');
-    final min = entry.timestamp.minute.toString().padLeft(2, '0');
+    if (entriesState == LoadState.loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final now = DateTime.now();
+    final todayCount = entries
+        .where(
+          (e) =>
+              e.timestamp.year == now.year &&
+              e.timestamp.month == now.month &&
+              e.timestamp.day == now.day,
+        )
+        .length;
+
+    final latest = entries.isEmpty ? null : entries.first;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: colorCard,
         border: Border.all(color: colorDivider),
@@ -631,54 +721,54 @@ class _LogCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: colorPrimary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _icons[entry.type] ?? Icons.circle,
-              color: colorPrimary,
-              size: 20,
-            ),
+          Icon(
+            latest != null
+                ? (_icons[latest.type] ?? Icons.circle)
+                : Icons.wb_sunny_outlined,
+            size: 14,
+            color: colorSecondary,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 6),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _buildTitle(entry),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                if (entry.note != null && entry.note!.isNotEmpty)
-                  Text(
-                    entry.note!,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
+            child: Text(
+              latest != null
+                  ? '${_time(latest)}  ${_title(latest)}'
+                  : 'No entries yet — tap Quick Log to start',
+              style: TextStyle(
+                fontSize: 13,
+                color: latest != null ? colorText : colorSecondary,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            '$hour:$min',
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
-          IconButton(
-            onPressed: onEdit,
-            tooltip: 'Edit log',
-            icon: const Icon(Icons.edit_outlined),
-            color: colorPrimary,
+          if (todayCount > 0) ...[
+            const SizedBox(width: 8),
+            Text(
+              'Today · $todayCount',
+              style: const TextStyle(fontSize: 12, color: colorSecondary),
+            ),
+          ],
+          TextButton(
+            onPressed: onViewAll,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('View all →'),
           ),
         ],
       ),
     );
   }
 
-  String _buildTitle(LogEntry e) {
+  String _time(LogEntry e) {
+    final h = e.timestamp.hour.toString().padLeft(2, '0');
+    final m = e.timestamp.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  String _title(LogEntry e) {
     switch (e.type) {
       case LogType.growth:
         final w = e.data['weight_kg'];
@@ -690,43 +780,30 @@ class _LogCard extends StatelessWidget {
         final start = e.data['start'];
         final end = e.data['end'];
         if (start != null && end != null) {
-          final s = DateTime.parse(start.toString());
-          final en = DateTime.parse(end.toString());
-          final dur = en.difference(s);
-          return 'Slept ${dur.inHours}h ${dur.inMinutes % 60}m';
+          try {
+            final s = DateTime.parse(start.toString());
+            final en = DateTime.parse(end.toString());
+            final dur = en.difference(s);
+            return 'Slept ${dur.inHours}h ${dur.inMinutes % 60}m';
+          } catch (_) {}
         }
         return 'Sleep logged';
       case LogType.feeding:
         final t = e.data['type'] ?? 'Feeding';
         final amt = e.data['amount_ml'];
-        if (amt != null && amt.toString().isNotEmpty) return '$t - ${amt}ml';
+        if (amt != null && amt.toString().isNotEmpty) {
+          return '$t · ${amt}ml';
+        }
         return '$t feeding';
-      case LogType.milestone:
-        return e.data['title']?.toString() ?? 'Milestone';
       case LogType.nappy:
         return 'Nappy — ${e.data['type'] ?? 'change'}';
       case LogType.medication:
         final name = e.data['name']?.toString() ?? 'Medication';
         final dose = e.data['dose']?.toString();
         return dose != null ? '$name — $dose' : name;
-      case LogType.food:
-        final food = e.data['name']?.toString() ?? 'Food';
-        final reaction = e.data['reaction']?.toString();
-        if (reaction != null && reaction != 'None')
-          return '$food (reaction: $reaction)';
-        return 'First food: $food';
-      case LogType.teeth:
-        return e.data['tooth']?.toString() ?? 'Tooth eruption';
-      case LogType.memory:
-        return e.data['title']?.toString() ?? 'Memory';
-      case LogType.appointment:
-        final type = e.data['type']?.toString() ?? 'Appointment';
-        final doc = e.data['doctor']?.toString();
-        return doc != null ? '$type — $doc' : type;
-      case LogType.sleep_training:
-        return e.data['method']?.toString() ?? 'Sleep training';
       default:
         return e.data['title']?.toString() ?? e.type.label;
     }
   }
 }
+

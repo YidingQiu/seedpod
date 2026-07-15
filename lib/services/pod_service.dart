@@ -37,24 +37,12 @@ class PodService {
 
   Future<List<LogEntry>> readAllLogEntries() async {
     try {
-      final files = await getResources();
-      final logFiles =
-          files.where((f) => _basename(f).startsWith('log_')).toList();
-
-      final entries = <LogEntry>[];
-      for (final filePath in logFiles) {
-        try {
-          final fileName = _basename(filePath);
-          final content = await readPod(fileName);
-          final entry = LogEntry.tryParseJsonString(content);
-          if (entry != null) entries.add(entry);
-        } catch (e) {
-          debugPrint('readLogEntry error for $filePath: $e');
-        }
-      }
-
+      final content = await readPod(LogEntry.allEntriesFileName);
+      final entries = LogEntry.listFromJsonString(content);
       entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       return entries;
+    } on ResourceNotExistException {
+      return [];
     } catch (e) {
       debugPrint('readAllLogEntries error: $e');
       return [];
@@ -63,10 +51,19 @@ class PodService {
 
   Future<bool> writeLogEntry(LogEntry entry) async {
     try {
+      List<LogEntry> existing = [];
+      try {
+        final content = await readPod(LogEntry.allEntriesFileName);
+        existing = LogEntry.listFromJsonString(content);
+      } on ResourceNotExistException {
+        // first entry ever
+      }
+      final updated = [entry, ...existing];
       await writePod(
-        entry.fileName,
-        entry.toJsonString(),
+        LogEntry.allEntriesFileName,
+        LogEntry.listToJsonString(updated),
         encrypted: true,
+        overwrite: true,
       );
       return true;
     } catch (e) {
@@ -102,8 +99,4 @@ class PodService {
     }
   }
 
-  String _basename(String path) {
-    final idx = path.lastIndexOf('/');
-    return idx >= 0 ? path.substring(idx + 1) : path;
-  }
 }

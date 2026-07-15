@@ -105,7 +105,21 @@ class LogEntry {
     required this.data,
   });
 
-  String get fileName => 'log_$id.json.enc.ttl';
+  static const String allEntriesFileName = 'log_entries.json.enc.ttl';
+
+  static List<LogEntry> listFromJsonString(String s) {
+    try {
+      final list = jsonDecode(s) as List;
+      return list
+          .map((e) => LogEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static String listToJsonString(List<LogEntry> entries) =>
+      jsonEncode(entries.map((e) => e.toJson()).toList());
 
   String? get title => data['title'] as String?;
   String? get note => data['note'] as String?;

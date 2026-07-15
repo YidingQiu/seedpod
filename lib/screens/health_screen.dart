@@ -2,38 +2,50 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/log_entry.dart';
+import 'package:seedpod/models/vaccine_reminder.dart';
 import 'package:seedpod/providers/app_state.dart';
 
 class HealthScreen extends StatelessWidget {
-  const HealthScreen({super.key});
+  final int initialTabIndex;
+
+  const HealthScreen({super.key, this.initialTabIndex = 0});
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final profile = state.selectedBaby;
+    final canGoBack = Navigator.of(context).canPop();
 
     return DefaultTabController(
       length: 3,
+      initialIndex: initialTabIndex,
       child: Scaffold(
         backgroundColor: colorBg,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: Container(
-            color: colorCard,
-            child: const TabBar(
-              labelColor: colorPrimary,
-              unselectedLabelColor: colorSecondary,
-              indicatorColor: colorPrimary,
-              tabs: [
-                Tab(text: 'Growth'),
-                Tab(text: 'Vaccines'),
-                Tab(text: 'Feeding'),
-              ],
-            ),
+        appBar: AppBar(
+          backgroundColor: colorCard,
+          elevation: 0,
+          toolbarHeight: canGoBack ? kToolbarHeight : 0,
+          automaticallyImplyLeading: false,
+          leading: canGoBack
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  tooltip: 'Back',
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : null,
+          title: canGoBack ? const Text('Health') : null,
+          bottom: const TabBar(
+            labelColor: colorPrimary,
+            unselectedLabelColor: colorSecondary,
+            indicatorColor: colorPrimary,
+            tabs: [
+              Tab(text: 'Growth'),
+              Tab(text: 'Vaccines'),
+              Tab(text: 'Feeding'),
+            ],
           ),
         ),
         body: TabBarView(
@@ -41,7 +53,6 @@ class HealthScreen extends StatelessWidget {
             _GrowthTab(state: state),
             _VaccineTab(
               ageInDays: profile?.age.inDays ?? 0,
-              dob: profile?.dateOfBirth,
             ),
             _FeedingTab(state: state),
           ],
@@ -432,112 +443,17 @@ class _MeasurementRow extends StatelessWidget {
 
 // ── Vaccine Tab ──────────────────────────────────────────────────────────────
 
-class _Vaccine {
-  final String name;
-  final String brand;
-  final bool isActFunded;
-  const _Vaccine(this.name, this.brand, {this.isActFunded = false});
-}
-
-class _VaccineMilestone {
-  final String label;
-  final int ageDays;
-  final List<_Vaccine> vaccines;
-  const _VaccineMilestone(this.label, this.ageDays, this.vaccines);
-}
-
-const List<_VaccineMilestone> _actSchedule = [
-  _VaccineMilestone('Birth', 0, [
-    _Vaccine('Hepatitis B', 'Engerix-B or H-B-Vax II Paediatric'),
-  ]),
-  _VaccineMilestone('6 weeks', 42, [
-    _Vaccine('DTPa-hepB-IPV-Hib', 'Infanrix hexa'),
-    _Vaccine('Pneumococcal PCV13', 'Prevenar 13'),
-    _Vaccine('Rotavirus', 'Rotarix (dose 1 of 2)'),
-    _Vaccine('Meningococcal B', 'Bexsero', isActFunded: true),
-  ]),
-  _VaccineMilestone('4 months', 120, [
-    _Vaccine('DTPa-hepB-IPV-Hib', 'Infanrix hexa (2nd dose)'),
-    _Vaccine('Pneumococcal PCV13', 'Prevenar 13 (2nd dose)'),
-    _Vaccine('Rotavirus', 'Rotarix (dose 2, final)'),
-    _Vaccine('Meningococcal B', 'Bexsero (2nd dose)', isActFunded: true),
-  ]),
-  _VaccineMilestone('6 months', 182, [
-    _Vaccine('DTPa-hepB-IPV-Hib', 'Infanrix hexa (3rd dose)'),
-    _Vaccine('Meningococcal B', 'Bexsero (3rd dose)', isActFunded: true),
-  ]),
-  _VaccineMilestone('12 months', 365, [
-    _Vaccine('MMR', 'Priorix or M-M-R II'),
-    _Vaccine('Meningococcal ACWY', 'Nimenrix or Menactra'),
-    _Vaccine('Pneumococcal PCV13', 'Prevenar 13 (3rd dose, booster)'),
-    _Vaccine('Varicella (chickenpox)', 'Varilrix or Varivax'),
-    _Vaccine('Meningococcal B', 'Bexsero (4th dose, booster)',
-        isActFunded: true),
-  ]),
-  _VaccineMilestone('18 months', 548, [
-    _Vaccine('DTPa', 'Infanrix or Tripacel'),
-    _Vaccine('Hib', 'ActHIB or Hiberix'),
-    _Vaccine('MMR + Varicella (MMRV)', 'Priorix-Tetra or ProQuad'),
-    _Vaccine('Hepatitis A', 'Avaxim Pediatric or Havrix Junior'),
-  ]),
-  _VaccineMilestone('4 years', 1461, [
-    _Vaccine('DTPa-IPV', 'Infanrix IPV or Quadracel'),
-    _Vaccine('MMR', 'Priorix or M-M-R II (if not received MMRV at 18 mo)'),
-    _Vaccine(
-        'Varicella', 'Varilrix or Varivax (if not received MMRV at 18 mo)'),
-  ]),
-];
-
-class _VaccineTab extends StatefulWidget {
+class _VaccineTab extends StatelessWidget {
   final int ageInDays;
-  final DateTime? dob;
-  const _VaccineTab({required this.ageInDays, this.dob});
-
-  @override
-  State<_VaccineTab> createState() => _VaccineTabState();
-}
-
-class _VaccineTabState extends State<_VaccineTab> {
-  // key: "vax_M{mIdx}_V{vIdx}" → ISO date string
-  final Map<String, String> _doneMap = {};
-  bool _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPrefs();
-  }
-
-  Future<void> _loadPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    for (final key in prefs.getKeys()) {
-      if (key.startsWith('vax_')) {
-        final val = prefs.getString(key);
-        if (val != null) _doneMap[key] = val;
-      }
-    }
-    if (mounted) setState(() => _loaded = true);
-  }
-
-  Future<void> _toggle(int mIdx, int vIdx, bool done) async {
-    final key = 'vax_M${mIdx}_V$vIdx';
-    final prefs = await SharedPreferences.getInstance();
-    if (done) {
-      final date = DateTime.now().toIso8601String();
-      await prefs.setString(key, date);
-      setState(() => _doneMap[key] = date);
-    } else {
-      await prefs.remove(key);
-      setState(() => _doneMap.remove(key));
-    }
-  }
-
-  bool _isDone(int mIdx, int vIdx) =>
-      _doneMap.containsKey('vax_M${mIdx}_V$vIdx');
-  String? _doneDate(int mIdx, int vIdx) => _doneMap['vax_M${mIdx}_V$vIdx'];
+  const _VaccineTab({required this.ageInDays});
 
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final remindersById = {
+      for (final reminder in state.vaccineReminders)
+        reminder.vaccineId: reminder,
+    };
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -564,23 +480,27 @@ class _VaccineTabState extends State<_VaccineTab> {
             ),
           ),
           const SizedBox(height: 16),
-          if (!_loaded)
+          if (!state.vaccineCompletionsLoaded)
             const Center(child: CircularProgressIndicator())
           else
-            for (int mIdx = 0; mIdx < _actSchedule.length; mIdx++)
+            for (int mIdx = 0; mIdx < actVaccineSchedule.length; mIdx++)
               _MilestoneCard(
-                milestone: _actSchedule[mIdx],
-                currentAgeDays: widget.ageInDays,
-                vaccineCount: _actSchedule[mIdx].vaccines.length,
+                milestone: actVaccineSchedule[mIdx],
+                currentAgeDays: ageInDays,
+                vaccineCount: actVaccineSchedule[mIdx].vaccines.length,
                 doneCount: List.generate(
-                  _actSchedule[mIdx].vaccines.length,
-                  (vIdx) => _isDone(mIdx, vIdx),
+                  actVaccineSchedule[mIdx].vaccines.length,
+                  (vIdx) => state.isVaccineDone(vaccineId(mIdx, vIdx)),
                 ).where((b) => b).length,
                 buildVaccineRow: (vIdx) => _VaccineRow(
-                  vaccine: _actSchedule[mIdx].vaccines[vIdx],
-                  checked: _isDone(mIdx, vIdx),
-                  dateIso: _doneDate(mIdx, vIdx),
-                  onChanged: (val) => _toggle(mIdx, vIdx, val ?? false),
+                  vaccine: actVaccineSchedule[mIdx].vaccines[vIdx],
+                  checked: state.isVaccineDone(vaccineId(mIdx, vIdx)),
+                  dateIso: state.vaccineDoneDate(vaccineId(mIdx, vIdx)),
+                  reminder: remindersById[vaccineId(mIdx, vIdx)],
+                  onChanged: (val) => state.setVaccineDone(
+                    vaccineId(mIdx, vIdx),
+                    val ?? false,
+                  ),
                 ),
               ),
         ],
@@ -590,7 +510,7 @@ class _VaccineTabState extends State<_VaccineTab> {
 }
 
 class _MilestoneCard extends StatelessWidget {
-  final _VaccineMilestone milestone;
+  final VaccineMilestone milestone;
   final int currentAgeDays;
   final int vaccineCount;
   final int doneCount;
@@ -695,15 +615,17 @@ class _MilestoneCard extends StatelessWidget {
 }
 
 class _VaccineRow extends StatelessWidget {
-  final _Vaccine vaccine;
+  final VaccineDefinition vaccine;
   final bool checked;
   final String? dateIso;
+  final VaccineReminder? reminder;
   final ValueChanged<bool?> onChanged;
 
   const _VaccineRow({
     required this.vaccine,
     required this.checked,
     required this.dateIso,
+    required this.reminder,
     required this.onChanged,
   });
 
@@ -751,6 +673,10 @@ class _VaccineRow extends StatelessWidget {
                 ),
               ),
             ),
+          if (!checked && reminder != null) ...[
+            const SizedBox(width: 6),
+            _VaccineReminderBadge(status: reminder!.status),
+          ],
         ],
       ),
       subtitle: Column(
@@ -770,6 +696,36 @@ class _VaccineRow extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _VaccineReminderBadge extends StatelessWidget {
+  final VaccineReminderStatus status;
+
+  const _VaccineReminderBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (status) {
+      VaccineReminderStatus.overdue => ('Overdue', const Color(0xFFC65D4B)),
+      VaccineReminderStatus.dueToday => ('Due today', colorAccent),
+      VaccineReminderStatus.dueSoon => ('Due soon', colorSecondary),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

@@ -9,12 +9,11 @@ import 'package:seedpod/models/log_entry.dart';
 
 class PodService {
   Future<void> createBaby(BabyProfile baby) async {
-    final existing = await _readAllBabies();
-    await _writeAllBabies([...existing, baby]);
+    await _writeBaby(baby, overwrite: false);
   }
 
   Future<List<BabyProfile>> loadBabies() async {
-    final babies = await _readAllBabies();
+    final babies = await _loadBabiesDirectory();
     if (babies.isNotEmpty) {
       if (babies.length == 1) await _assignLegacyLogsTo(babies.single.id);
       return babies;
@@ -23,49 +22,69 @@ class PodService {
     final legacy = await _readLegacyBabyProfile();
     if (legacy == null) return [];
 
-    final migrated = legacy.id.isEmpty
-        ? legacy.copyWith(id: BabyProfile.generateId())
-        : legacy;
-    await _writeAllBabies([migrated]);
+    final migrated = legacy.copyWith(id: BabyProfile.generateId());
+    await createBaby(migrated);
     await _assignLegacyLogsTo(migrated.id);
     return [migrated];
   }
 
   Future<void> updateBaby(BabyProfile baby) async {
-    final existing = await _readAllBabies();
-    final index = existing.indexWhere((b) => b.id == baby.id);
-    if (index == -1) {
-      await _writeAllBabies([...existing, baby]);
-    } else {
-      await _writeAllBabies([...existing]..[index] = baby);
-    }
+    await _writeBaby(baby, overwrite: true);
   }
 
   Future<void> deleteBaby(String babyId) async {
-    final existing = await _readAllBabies();
-    await _writeAllBabies(existing.where((b) => b.id != babyId).toList());
-  }
-
-  Future<List<BabyProfile>> _readAllBabies() async {
     try {
-      final content = await readPod(BabyProfile.allProfilesFileName);
-      return BabyProfile.listFromJsonString(content)
-          .where((b) => b.id.isNotEmpty)
-          .toList();
+      final fileUrl = await getFileUrl(
+        '${await getDataDirPath()}/${BabyProfile.fileNameFor(babyId)}',
+      );
+      await deleteFile(fileUrl: fileUrl);
     } on ResourceNotExistException {
-      return [];
-    } catch (e) {
-      debugPrint('_readAllBabies error: $e');
-      return [];
+      return;
     }
   }
 
-  Future<void> _writeAllBabies(List<BabyProfile> babies) => writePod(
-        BabyProfile.allProfilesFileName,
-        BabyProfile.listToJsonString(babies),
-        encrypted: true,
-        overwrite: true,
+  Future<void> _writeBaby(BabyProfile baby, {required bool overwrite}) async {
+    await writePod(
+      BabyProfile.fileNameFor(baby.id),
+      baby.toJsonString(),
+      encrypted: true,
+      overwrite: overwrite,
+    );
+  }
+
+  Future<List<BabyProfile>> _loadBabiesDirectory() async {
+    try {
+      final dataPath = await getDataDirPath();
+      final directoryUrl = await getDirUrl(
+        '$dataPath/${BabyProfile.babiesDirectory}',
       );
+      final status = await checkResourceStatus(directoryUrl, isFile: false);
+      if (status == ResourceStatus.notExist) return [];
+      if (status != ResourceStatus.exist) {
+        throw Exception('Unable to access the babies directory ($status)');
+      }
+      final resources = await getResourcesInContainer(directoryUrl);
+      final babies = <BabyProfile>[];
+      for (final resource in resources.files) {
+        final name = Uri.parse(resource).pathSegments.last;
+        if (!RegExp(r'^baby_[A-Za-z0-9_-]+\.json\.enc\.ttl$').hasMatch(name)) {
+          continue;
+        }
+        final content = await readPod('${BabyProfile.babiesDirectory}/$name');
+        final baby = BabyProfile.tryParseJsonString(content);
+        if (baby == null || baby.id.isEmpty) {
+          throw FormatException('Invalid baby profile file: $name');
+        }
+        babies.add(baby);
+      }
+      return babies;
+    } on ResourceNotExistException {
+      return [];
+    } catch (e) {
+      debugPrint('loadBabies directory error: $e');
+      rethrow;
+    }
+  }
 
   Future<BabyProfile?> _readLegacyBabyProfile() async {
     try {
@@ -141,8 +160,6 @@ class PodService {
     }
   }
 
-  /// Overwrites the entire log-entries file. Used for bulk operations such as
-  /// import/merge, where writing one entry at a time would be O(n^2).
   Future<bool> writeAllLogEntries(List<LogEntry> entries) async {
     try {
       await _writeAllLogEntries(entries);

@@ -343,10 +343,18 @@ class _TimelineItem extends StatelessWidget {
         }
         return 'Sleep logged';
       case LogType.feeding:
-        final t = e.data['type'] ?? 'Feeding';
-        final amt = e.data['amount_ml'];
-        if (amt != null && amt.toString().isNotEmpty) return '$t · ${amt}ml';
-        return '$t feeding';
+        final type = e.data['type']?.toString() ?? '';
+        final parts = <String>[type.isEmpty ? 'Feeding' : type];
+        if (type == 'Breast') {
+          final side = e.data['side']?.toString() ?? '';
+          if (side.isNotEmpty) parts.add(side);
+          final dur = e.data['duration_min']?.toString() ?? '';
+          if (dur.isNotEmpty) parts.add('$dur min');
+        } else {
+          final amt = e.data['amount_ml']?.toString() ?? '';
+          if (amt.isNotEmpty) parts.add('${amt}ml');
+        }
+        return parts.join(' · ');
       case LogType.milestone:
         return e.data['title']?.toString() ?? 'Milestone';
       default:

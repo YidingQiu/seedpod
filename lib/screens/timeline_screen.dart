@@ -280,6 +280,13 @@ class _TimelineItem extends StatelessWidget {
                           '$hour:$min',
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
+                        IconButton(
+                          onPressed: () => _openEditor(context),
+                          tooltip: 'Edit log',
+                          icon: const Icon(Icons.edit_outlined, size: 19),
+                          color: colorPrimary,
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -303,6 +310,15 @@ class _TimelineItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _openEditor(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => QuickLogSheet(entry: entry),
     );
   }
 

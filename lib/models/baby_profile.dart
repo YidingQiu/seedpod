@@ -9,7 +9,6 @@ class BabyProfile {
   final DateTime dateOfBirth;
   final String? gender;
   final String? photoUrl;
-  final String? webId;
 
   const BabyProfile({
     required this.id,
@@ -17,7 +16,6 @@ class BabyProfile {
     required this.dateOfBirth,
     this.gender,
     this.photoUrl,
-    this.webId,
   });
 
   static const String fileName = 'profile.json.enc.ttl';
@@ -75,7 +73,6 @@ class BabyProfile {
       dateOfBirth: DateTime.parse(json['dateOfBirth'] as String),
       gender: json['gender'] as String?,
       photoUrl: json['photoUrl'] as String?,
-      webId: json['webId'] as String?,
     );
   }
 
@@ -85,7 +82,6 @@ class BabyProfile {
         'dateOfBirth': dateOfBirth.toIso8601String(),
         if (gender != null) 'gender': gender,
         if (photoUrl != null) 'photoUrl': photoUrl,
-        if (webId != null) 'webId': webId,
       };
 
   String toJsonString() => jsonEncode(toJson());
@@ -106,7 +102,6 @@ class BabyProfile {
     DateTime? dateOfBirth,
     String? gender,
     String? photoUrl,
-    String? webId,
   }) {
     return BabyProfile(
       id: id ?? this.id,
@@ -114,7 +109,6 @@ class BabyProfile {
       dateOfBirth: dateOfBirth ?? this.dateOfBirth,
       gender: gender ?? this.gender,
       photoUrl: photoUrl ?? this.photoUrl,
-      webId: webId ?? this.webId,
     );
   }
 }

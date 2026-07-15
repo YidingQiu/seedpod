@@ -97,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text('Remove ${baby.name}?'),
         content: Text(
           'This will remove ${baby.name}\'s profile and all associated logs from your Solid POD.\n\n'
-          '${baby.webId != null ? 'Note: the Solid account (${baby.webId}) will NOT be deleted — contact your POD provider to remove it.\n\n' : ''}'
+          'Note: the Solid account created for ${baby.name} will NOT be deleted from the server.\n\n'
           'This action cannot be undone.',
         ),
         actions: [

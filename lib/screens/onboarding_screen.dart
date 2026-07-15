@@ -28,7 +28,6 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _webIdController = TextEditingController();
   DateTime? _selectedDate;
   String? _selectedGender;
   bool _isSaving = false;
@@ -41,14 +40,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _nameController.text = widget.initialProfile!.name;
       _selectedDate = widget.initialProfile!.dateOfBirth;
       _selectedGender = widget.initialProfile!.gender;
-      _webIdController.text = widget.initialProfile!.webId ?? '';
     }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _webIdController.dispose();
     super.dispose();
   }
 
@@ -101,13 +98,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
       await getKeyFromUserIfRequired(context, widget);
 
-      final webId = _webIdController.text.trim();
       final profile = BabyProfile(
         id: widget.initialProfile?.id ?? BabyProfile.generateId(),
         name: _nameController.text.trim(),
         dateOfBirth: _selectedDate!,
         gender: _selectedGender,
-        webId: webId.isEmpty ? null : webId,
       );
 
       if (!mounted) return;
@@ -298,21 +293,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
                           ),
                       ],
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      "Baby's Solid WebID (optional)",
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _webIdController,
-                      decoration: const InputDecoration(
-                        hintText:
-                            'https://pods.d01.solidcommunity.au/babyname/profile/card#me',
-                        prefixIcon: Icon(Icons.link),
-                      ),
-                      keyboardType: TextInputType.url,
                     ),
                     const SizedBox(height: 40),
                     SizedBox(

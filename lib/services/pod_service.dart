@@ -35,6 +35,19 @@ class PodService {
     }
   }
 
+  Future<bool> deleteBabyProfile() async {
+    try {
+      final fileUrl = await getFileUrl(BabyProfile.fileName);
+      await deleteFile(fileUrl: fileUrl);
+      return true;
+    } on ResourceNotExistException {
+      return true;
+    } catch (e) {
+      debugPrint('deleteBabyProfile error: $e');
+      return false;
+    }
+  }
+
   Future<List<LogEntry>> readAllLogEntries() async {
     try {
       final content = await readPod(LogEntry.allEntriesFileName);

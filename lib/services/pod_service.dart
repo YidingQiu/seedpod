@@ -142,6 +142,24 @@ class PodService {
     }
   }
 
+  Future<bool> updateLog(LogEntry entry) async {
+    try {
+      final content = await readPod(LogEntry.allEntriesFileName);
+      final existing = LogEntry.listFromJsonString(content);
+      final index = existing.indexWhere(
+        (item) => item.id == entry.id && item.babyId == entry.babyId,
+      );
+      if (index == -1) return false;
+
+      final updated = [...existing]..[index] = entry;
+      await _writeAllLogEntries(updated);
+      return true;
+    } catch (e) {
+      debugPrint('updateLog error: $e');
+      return false;
+    }
+  }
+
   Future<void> _writeAllLogEntries(List<LogEntry> entries) => writePod(
         LogEntry.allEntriesFileName,
         LogEntry.listToJsonString(entries),

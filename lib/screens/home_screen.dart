@@ -41,12 +41,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openQuickLog() {
+  void _openQuickLog([LogType? initialType]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => QuickLogSheet(initialType: initialType),
+    );
+  }
+
+  void _openEditLog(LogEntry entry) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => QuickLogSheet(entry: entry),
     );
   }
 
@@ -123,7 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: colorBg,
-      
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openQuickLog,
         backgroundColor: colorPrimary,
@@ -173,7 +181,11 @@ class _HomeScreenState extends State<HomeScreen> {
               else if (todayLogs.isEmpty)
                 _EmptyToday(onLog: _openQuickLog)
               else
-                for (final entry in todayLogs) _LogCard(entry: entry),
+                for (final entry in todayLogs)
+                  _LogCard(
+                    entry: entry,
+                    onEdit: () => _openEditLog(entry),
+                  ),
               const SizedBox(height: 80),
             ],
           ),
@@ -353,7 +365,7 @@ class _PodPillState extends State<_PodPill> {
 }
 
 class _QuickActions extends StatelessWidget {
-  final VoidCallback onLog;
+  final ValueChanged<LogType?> onLog;
   const _QuickActions({required this.onLog});
 
   @override
@@ -382,14 +394,15 @@ class _QuickActions extends StatelessWidget {
 class _ActionChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final LogType type;
+  final ValueChanged<LogType?> onLog;
 
-  const _ActionChip(this.icon, this.label, this.onTap);
+  const _ActionChip(this.icon, this.label, this.type, this.onLog);
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () => onLog(type),
       borderRadius: BorderRadius.circular(radiusMedium),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -455,7 +468,8 @@ class _EmptyToday extends StatelessWidget {
 
 class _LogCard extends StatelessWidget {
   final LogEntry entry;
-  const _LogCard({required this.entry});
+  final VoidCallback onEdit;
+  const _LogCard({required this.entry, required this.onEdit});
 
   static const Map<LogType, IconData> _icons = {
     LogType.growth: Icons.straighten,
@@ -525,6 +539,12 @@ class _LogCard extends StatelessWidget {
           Text(
             '$hour:$min',
             style: Theme.of(context).textTheme.labelSmall,
+          ),
+          IconButton(
+            onPressed: onEdit,
+            tooltip: 'Edit log',
+            icon: const Icon(Icons.edit_outlined),
+            color: colorPrimary,
           ),
         ],
       ),

@@ -132,6 +132,36 @@ class AppState extends ChangeNotifier {
     return ok;
   }
 
+  Future<bool> updateEntry(LogEntry updatedEntry) async {
+    final baby = selectedBaby;
+    if (baby == null || updatedEntry.babyId != baby.id) return false;
+
+    final index = _entries.indexWhere(
+      (entry) =>
+          entry.id == updatedEntry.id && entry.babyId == updatedEntry.babyId,
+    );
+    if (index == -1) return false;
+    final original = _entries[index];
+    if (original.babyId != baby.id || original.type != updatedEntry.type) {
+      return false;
+    }
+
+    final safeUpdate = LogEntry(
+      id: original.id,
+      babyId: original.babyId,
+      type: original.type,
+      timestamp: updatedEntry.timestamp,
+      data: updatedEntry.data,
+    );
+    final ok = await _pod.updateLog(safeUpdate);
+    if (!ok) return false;
+
+    _entries = [..._entries]..[index] = safeUpdate;
+    _entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    notifyListeners();
+    return true;
+  }
+
   Future<void> loadModulePrefs() async {
     _modulePrefs = await ModulePrefs.loadFromPrefs();
     notifyListeners();

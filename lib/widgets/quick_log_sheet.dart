@@ -11,8 +11,9 @@ import 'package:seedpod/providers/app_state.dart';
 
 class QuickLogSheet extends StatefulWidget {
   final LogType? initialType;
+  final LogEntry? entry;
 
-  const QuickLogSheet({super.key, this.initialType});
+  const QuickLogSheet({super.key, this.initialType, this.entry});
 
   @override
   State<QuickLogSheet> createState() => _QuickLogSheetState();
@@ -20,12 +21,18 @@ class QuickLogSheet extends StatefulWidget {
 
 class _QuickLogSheetState extends State<QuickLogSheet> {
   LogType? _selectedType;
+  late DateTime _timestamp;
   bool _isSaving = false;
+
+  bool get _isEditing => widget.entry != null;
 
   @override
   void initState() {
     super.initState();
-    _selectedType = widget.initialType;
+    final entry = widget.entry;
+    _selectedType = entry?.type ?? widget.initialType;
+    _timestamp = entry?.timestamp ?? DateTime.now();
+    if (entry != null) _populateFromEntry(entry);
   }
 
   final _titleController = TextEditingController();
@@ -62,6 +69,31 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
   String _breastSide = 'Left';
   final _feedingAmountController = TextEditingController();
   final _feedingDurationController = TextEditingController();
+
+  void _populateFromEntry(LogEntry entry) {
+    final data = entry.data;
+    _noteController.text = data['note']?.toString() ?? '';
+    _titleController.text =
+        (entry.type == LogType.sleep_training ? data['method'] : data['title'])
+                ?.toString() ??
+            '';
+    _weightController.text = data['weight_kg']?.toString() ?? '';
+    _heightController.text = data['height_cm']?.toString() ?? '';
+    _sleepStart = DateTime.tryParse(data['start']?.toString() ?? '');
+    _sleepEnd = DateTime.tryParse(data['end']?.toString() ?? '');
+    _nappyType = data['type']?.toString() ?? _nappyType;
+    _medicationNameCtrl.text = data['name']?.toString() ?? '';
+    _doseCtrl.text = data['dose']?.toString() ?? '';
+    _foodNameCtrl.text = data['name']?.toString() ?? '';
+    _foodReaction = data['reaction']?.toString() ?? _foodReaction;
+    _toothCtrl.text = data['tooth']?.toString() ?? '';
+    _appointmentType = data['type']?.toString() ?? _appointmentType;
+    _doctorCtrl.text = data['doctor']?.toString() ?? '';
+    _feedingType = data['type']?.toString() ?? _feedingType;
+    _breastSide = data['side']?.toString() ?? _breastSide;
+    _feedingAmountController.text = data['amount_ml']?.toString() ?? '';
+    _feedingDurationController.text = data['duration_min']?.toString() ?? '';
+  }
 
   @override
   void dispose() {
@@ -122,29 +154,42 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       await getKeyFromUserIfRequired(context, widget);
 
       final data = _buildData();
+      final original = widget.entry;
       final entry = LogEntry(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: original?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        babyId: original?.babyId ?? '',
         type: _selectedType!,
-        timestamp: DateTime.now(),
+        timestamp: _isEditing ? _timestamp : DateTime.now(),
         data: data,
       );
 
       if (!mounted) return;
-      final ok = await context.read<AppState>().addEntry(entry);
+      final appState = context.read<AppState>();
+      final ok = _isEditing
+          ? await appState.updateEntry(entry)
+          : await appState.addEntry(entry);
 
       if (!mounted) return;
       if (ok) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Log saved to your POD'),
+          SnackBar(
+            content: Text(
+              _isEditing
+                  ? 'Log updated successfully.'
+                  : 'Log saved to your POD',
+            ),
             backgroundColor: colorPrimary,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to save. Please try again.'),
+          SnackBar(
+            content: Text(
+              _isEditing
+                  ? 'Failed to save changes. Please try again.'
+                  : 'Failed to save. Please try again.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -285,12 +330,17 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                   children: [
                     const SizedBox(height: 8),
                     Text(
-                      'Quick Log',
+                      _isEditing
+                          ? 'Edit ${_selectedType!.label} Log'
+                          : 'Quick Log',
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 20),
-                    _buildTypeGrid(),
+                    if (!_isEditing) _buildTypeGrid(),
                     if (_selectedType != null) ...[
+                      if (_isEditing) ...[
+                        _buildTimestampField(),
+                      ],
                       const SizedBox(height: 24),
                       _buildForm(),
                       const SizedBox(height: 24),
@@ -307,7 +357,11 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : Text('Save ${_selectedType!.label}'),
+                              : Text(
+                                  _isEditing
+                                      ? 'Save Changes'
+                                      : 'Save ${_selectedType!.label}',
+                                ),
                         ),
                       ),
                     ],
@@ -353,6 +407,64 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
           ),
       ],
     );
+  }
+
+  Widget _buildTimestampField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label('Log date and time'),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: _pickTimestamp,
+          borderRadius: BorderRadius.circular(radiusMedium),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: colorCard,
+              border: Border.all(color: colorDivider),
+              borderRadius: BorderRadius.circular(radiusMedium),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.event, color: colorSecondary, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  '${_timestamp.day}/${_timestamp.month}/${_timestamp.year} '
+                  '${_timestamp.hour.toString().padLeft(2, '0')}:'
+                  '${_timestamp.minute.toString().padLeft(2, '0')}',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickTimestamp() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _timestamp,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_timestamp),
+    );
+    if (time == null || !mounted) return;
+    setState(() {
+      _timestamp = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    });
   }
 
   Widget _buildForm() {

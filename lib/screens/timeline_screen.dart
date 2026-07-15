@@ -282,6 +282,13 @@ class _TimelineItem extends StatelessWidget {
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                         IconButton(
+                          onPressed: () => _showDetail(context),
+                          tooltip: 'View details',
+                          icon: const Icon(Icons.info_outline, size: 19),
+                          color: colorPrimary,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
                           onPressed: () => _openEditor(context),
                           tooltip: 'Edit log',
                           icon: const Icon(Icons.edit_outlined, size: 19),

@@ -372,12 +372,12 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
         ? logTypeOptions.where((o) => o.type == widget.initialType).toList()
         : logTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
     return GridView.count(
-      crossAxisCount: 5,
-      childAspectRatio: 2.25,
+      crossAxisCount: 4,
+      childAspectRatio: 1.0,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
       children: [
         for (final opt in visible)
           _TypeTile(

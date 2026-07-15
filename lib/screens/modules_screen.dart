@@ -7,6 +7,29 @@ import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/module_prefs.dart';
 import 'package:seedpod/providers/app_state.dart';
 
+void _showToggleFeedback(
+  BuildContext context,
+  SeedPodModule module,
+  bool enabling,
+) {
+  final String where;
+  if (module.id == 'childcare') {
+    where = enabling
+        ? 'Added to the sidebar navigation'
+        : 'Removed from the sidebar navigation';
+  } else {
+    where = enabling ? 'Now available in Quick Log' : 'Removed from Quick Log';
+  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        '${enabling ? "Enabled" : "Disabled"}: ${module.title} — $where',
+      ),
+      duration: const Duration(seconds: 3),
+    ),
+  );
+}
+
 class ModulesScreen extends StatelessWidget {
   const ModulesScreen({super.key});
 
@@ -53,13 +76,17 @@ class ModulesScreen extends StatelessWidget {
             for (final category in categories.keys) ...[
               _SectionHeader(category),
               const SizedBox(height: 10),
-              ...categories[category]!.map(
-                (m) => _ModuleCard(
+              ...categories[category]!.map((m) {
+                final enabled = prefs.isEnabled(m.id);
+                return _ModuleCard(
                   module: m,
-                  enabled: prefs.isEnabled(m.id),
-                  onToggle: () => context.read<AppState>().toggleModule(m.id),
-                ),
-              ),
+                  enabled: enabled,
+                  onToggle: () {
+                    context.read<AppState>().toggleModule(m.id);
+                    _showToggleFeedback(context, m, !enabled);
+                  },
+                );
+              }),
               const SizedBox(height: 16),
             ],
 

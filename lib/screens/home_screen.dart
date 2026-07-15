@@ -7,6 +7,7 @@ import 'package:solidpod/solidpod.dart';
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/baby_profile.dart';
 import 'package:seedpod/models/log_entry.dart';
+import 'package:seedpod/models/log_type_option.dart';
 import 'package:seedpod/models/vaccine_reminder.dart';
 import 'package:seedpod/providers/app_state.dart';
 import 'package:seedpod/screens/health_screen.dart';
@@ -192,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 24),
               _StatCards(entries: state.entries),
               const SizedBox(height: 16),
-              _QuickActions(onLog: _openQuickLog),
+              _QuickLogPanel(onLog: _openQuickLog),
               const SizedBox(height: 16),
               if (vaccineReminders.isNotEmpty) ...[
                 _VaccinationRemindersCard(
@@ -475,62 +476,113 @@ class _PodPillState extends State<_PodPill> {
   }
 }
 
-class _QuickActions extends StatelessWidget {
+class _QuickLogPanel extends StatefulWidget {
   final ValueChanged<LogType?> onLog;
-  const _QuickActions({required this.onLog});
+  const _QuickLogPanel({required this.onLog});
+
+  @override
+  State<_QuickLogPanel> createState() => _QuickLogPanelState();
+}
+
+class _QuickLogPanelState extends State<_QuickLogPanel> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final prefs = context.watch<AppState>().modulePrefs;
+    final options =
+        logTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog),
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          borderRadius: BorderRadius.circular(radiusMedium),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: colorCard,
+              border: Border.all(color: colorDivider),
+              borderRadius: BorderRadius.circular(radiusMedium),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.add_circle_outline,
+                  color: colorPrimary,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Quick Log',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: colorText,
+                    fontSize: 14,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: colorSecondary,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _ActionChip(Icons.local_cafe, 'Feeding', LogType.feeding, onLog),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog),
-        ),
+        if (_expanded) ...[
+          const SizedBox(height: 10),
+          GridView.count(
+            crossAxisCount: 4,
+            childAspectRatio: 1.05,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            children: [
+              for (final opt in options)
+                _LogTypeTile(
+                  option: opt,
+                  onTap: () => widget.onLog(opt.type),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }
 }
 
-class _ActionChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final LogType type;
-  final ValueChanged<LogType?> onLog;
+class _LogTypeTile extends StatelessWidget {
+  final LogTypeOption option;
+  final VoidCallback onTap;
 
-  const _ActionChip(this.icon, this.label, this.type, this.onLog);
+  const _LogTypeTile({required this.option, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => onLog(type),
+      onTap: onTap,
       borderRadius: BorderRadius.circular(radiusMedium),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: colorCard,
           border: Border.all(color: colorDivider),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: colorPrimary, size: 22),
+            Icon(option.icon, color: colorPrimary, size: 22),
             const SizedBox(height: 4),
             Text(
-              label,
-              style: const TextStyle(fontSize: 11, color: colorText),
+              option.label,
+              style: const TextStyle(fontSize: 10, color: colorText),
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

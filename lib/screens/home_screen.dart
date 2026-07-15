@@ -40,12 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openQuickLog() {
+  void _openQuickLog([LogType? initialType]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const QuickLogSheet(),
+      builder: (_) => const QuickLogSheet(initialType: initialType),
     );
   }
 
@@ -218,20 +218,20 @@ class _PodPillState extends State<_PodPill> {
 }
 
 class _QuickActions extends StatelessWidget {
-  final VoidCallback onLog;
+  final void Function(LogType) onLog;
   const _QuickActions({required this.onLog});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _ActionChip(Icons.straighten, 'Growth', onLog)),
+        Expanded(child: _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.bedtime, 'Sleep', onLog)),
+        Expanded(child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.local_cafe, 'Feeding', onLog)),
+        Expanded(child: _ActionChip(Icons.local_cafe, 'Feeding', LogType.feeding, onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.star, 'Milestone', onLog)),
+        Expanded(child: _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog)),
       ],
     );
   }
@@ -240,14 +240,15 @@ class _QuickActions extends StatelessWidget {
 class _ActionChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final LogType type;
+  final void Function(LogType) onTap;
 
-  const _ActionChip(this.icon, this.label, this.onTap);
+  const _ActionChip(this.icon, this.label, this.type, this.onTap);
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () => onTap(type),
       borderRadius: BorderRadius.circular(radiusMedium),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),

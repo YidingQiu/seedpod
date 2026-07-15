@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const QuickLogSheet(initialType: initialType),
+      builder: (_) => QuickLogSheet(initialType: initialType),
     );
   }
 

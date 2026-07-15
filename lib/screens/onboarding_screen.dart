@@ -86,6 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await getKeyFromUserIfRequired(context, widget);
 
       final profile = BabyProfile(
+        id: widget.initialProfile?.id ?? BabyProfile.generateId(),
         name: _nameController.text.trim(),
         dateOfBirth: _selectedDate!,
         gender: _selectedGender,
@@ -94,8 +95,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (!mounted) return;
       final appState = context.read<AppState>();
       final ok = widget.isEditing
-          ? await appState.updateProfile(profile)
-          : await appState.saveProfile(profile);
+          ? await appState.updateBaby(profile)
+          : await appState.addBaby(profile);
 
       if (!mounted) return;
       if (!ok) {
@@ -108,7 +109,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return;
       }
 
-      if (widget.isEditing) {
+      if (widget.isEditing || Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
     } on NotLoggedInException {
@@ -134,8 +135,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final showCreateAppBar =
+        !widget.isEditing && Navigator.of(context).canPop();
+
     return Scaffold(
       backgroundColor: colorBg,
+      appBar: showCreateAppBar
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Text('Create Baby Profile'),
+            )
+          : null,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -165,7 +178,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      widget.isEditing ? 'Edit Baby Profile' : 'Welcome to SeedPod',
+                      widget.isEditing
+                          ? 'Edit Baby Profile'
+                          : 'Welcome to SeedPod',
                       style: Theme.of(context).textTheme.headlineLarge,
                       textAlign: TextAlign.center,
                     ),
@@ -188,8 +203,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       decoration: const InputDecoration(
                         hintText: 'Enter your baby\'s name',
                       ),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Name is required'
+                          : null,
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -247,7 +263,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: ChoiceChip(
                               label: Text(g),
                               selected: _selectedGender == g,
-                              selectedColor: colorPrimary.withValues(alpha: 0.15),
+                              selectedColor:
+                                  colorPrimary.withValues(alpha: 0.15),
                               onSelected: (selected) {
                                 setState(() {
                                   _selectedGender = selected ? g : null;

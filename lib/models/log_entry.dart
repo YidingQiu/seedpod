@@ -94,12 +94,14 @@ extension LogTypeLabel on LogType {
 
 class LogEntry {
   final String id;
+  final String babyId;
   final LogType type;
   final DateTime timestamp;
   final Map<String, dynamic> data;
 
   const LogEntry({
     required this.id,
+    this.babyId = '',
     required this.type,
     required this.timestamp,
     required this.data,
@@ -127,6 +129,7 @@ class LogEntry {
   factory LogEntry.fromJson(Map<String, dynamic> json) {
     return LogEntry(
       id: json['id'] as String,
+      babyId: json['babyId'] as String? ?? '',
       type: LogType.values.firstWhere(
         (t) => t.name == json['type'],
         orElse: () => LogType.note,
@@ -138,10 +141,19 @@ class LogEntry {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'babyId': babyId,
         'type': type.name,
         'timestamp': timestamp.toIso8601String(),
         'data': data,
       };
+
+  LogEntry copyWith({String? babyId}) => LogEntry(
+        id: id,
+        babyId: babyId ?? this.babyId,
+        type: type,
+        timestamp: timestamp,
+        data: data,
+      );
 
   String toJsonString() => jsonEncode(toJson());
 

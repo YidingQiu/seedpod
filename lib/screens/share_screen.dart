@@ -341,7 +341,8 @@ class _AccessChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: colorPrimary),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(color: colorPrimary, fontSize: 12)),
+          Text(label,
+              style: const TextStyle(color: colorPrimary, fontSize: 12)),
         ],
       ),
     );

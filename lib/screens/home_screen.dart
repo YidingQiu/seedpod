@@ -36,17 +36,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (appState.profileState == LoadState.idle) {
       await appState.loadProfile();
     }
-    if (appState.entriesState == LoadState.idle && appState.hasProfile) {
+    if (appState.entriesState == LoadState.idle && appState.hasBabies) {
       await appState.loadEntries();
     }
   }
 
-  void _openQuickLog([LogType? initialType]) {
+  void _openQuickLog() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => QuickLogSheet(initialType: initialType),
+      builder: (_) => const QuickLogSheet(),
     );
   }
 
@@ -58,14 +58,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _deleteProfile() async {
+  Future<void> _openAddBaby() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+    );
+  }
+
+  Future<void> _deleteBaby(BabyProfile baby) async {
     final appState = context.read<AppState>();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete baby profile?'),
+        title: Text('Delete ${baby.name}?'),
         content: const Text(
-          'This will remove the baby profile from your Solid POD. This action cannot be undone.',
+          'This will remove this baby profile from your Solid POD. This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -82,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (confirmed != true) return;
 
-    final ok = await appState.deleteProfile();
+    final ok = await appState.deleteBaby(baby.id);
     if (!mounted) return;
 
     if (!ok) {
@@ -108,15 +114,16 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (!state.hasProfile) {
+    if (!state.hasBabies) {
       return const OnboardingScreen();
     }
 
-    final profile = state.profile!;
+    final profile = state.selectedBaby!;
     final todayLogs = state.todayEntries;
 
     return Scaffold(
       backgroundColor: colorBg,
+      
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openQuickLog,
         backgroundColor: colorPrimary,
@@ -136,10 +143,17 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _BabySelector(
+                babies: state.babies,
+                selectedBabyId: profile.id,
+                onSelected: state.selectBaby,
+                onAdd: _openAddBaby,
+              ),
+              const SizedBox(height: 16),
               _BabyCard(
                 profile: profile,
                 onEdit: () => _openEditProfile(profile),
-                onDelete: _deleteProfile,
+                onDelete: () => _deleteBaby(profile),
               ),
               const SizedBox(height: 24),
               _QuickActions(onLog: _openQuickLog),
@@ -165,6 +179,50 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BabySelector extends StatelessWidget {
+  final List<BabyProfile> babies;
+  final String selectedBabyId;
+  final ValueChanged<String> onSelected;
+  final VoidCallback onAdd;
+
+  const _BabySelector({
+    required this.babies,
+    required this.selectedBabyId,
+    required this.onSelected,
+    required this.onAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            initialValue: selectedBabyId,
+            decoration: const InputDecoration(
+              labelText: 'Current baby',
+              prefixIcon: Icon(Icons.child_care),
+            ),
+            items: [
+              for (final baby in babies)
+                DropdownMenuItem(value: baby.id, child: Text(baby.name)),
+            ],
+            onChanged: (id) {
+              if (id != null) onSelected(id);
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        OutlinedButton.icon(
+          onPressed: onAdd,
+          icon: const Icon(Icons.add),
+          label: const Text('Add Baby'),
+        ),
+      ],
     );
   }
 }
@@ -295,20 +353,20 @@ class _PodPillState extends State<_PodPill> {
 }
 
 class _QuickActions extends StatelessWidget {
-  final void Function(LogType) onLog;
+  final VoidCallback onLog;
   const _QuickActions({required this.onLog});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog)),
+        Expanded(child: _ActionChip(Icons.straighten, 'Growth', onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog)),
+        Expanded(child: _ActionChip(Icons.bedtime, 'Sleep', onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.local_cafe, 'Feeding', LogType.feeding, onLog)),
+        Expanded(child: _ActionChip(Icons.local_cafe, 'Feeding', onLog)),
         const SizedBox(width: 8),
-        Expanded(child: _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog)),
+        Expanded(child: _ActionChip(Icons.star, 'Milestone', onLog)),
       ],
     );
   }
@@ -317,15 +375,14 @@ class _QuickActions extends StatelessWidget {
 class _ActionChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  final LogType type;
-  final void Function(LogType) onTap;
+  final VoidCallback onTap;
 
-  const _ActionChip(this.icon, this.label, this.type, this.onTap);
+  const _ActionChip(this.icon, this.label, this.onTap);
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => onTap(type),
+      onTap: onTap,
       borderRadius: BorderRadius.circular(radiusMedium),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -501,7 +558,8 @@ class _LogCard extends StatelessWidget {
       case LogType.food:
         final food = e.data['name']?.toString() ?? 'Food';
         final reaction = e.data['reaction']?.toString();
-        if (reaction != null && reaction != 'None') return '$food (reaction: $reaction)';
+        if (reaction != null && reaction != 'None')
+          return '$food (reaction: $reaction)';
         return 'First food: $food';
       case LogType.teeth:
         return e.data['tooth']?.toString() ?? 'Tooth eruption';

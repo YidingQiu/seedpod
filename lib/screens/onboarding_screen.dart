@@ -318,7 +318,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isSaving ? null : _save,
+                        onPressed: (_isSaving || (!widget.isEditing && !_podCreated))
+                            ? null
+                            : _save,
                         child: _isSaving
                             ? const SizedBox(
                                 width: 20,

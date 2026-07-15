@@ -583,11 +583,8 @@ class _StatCards extends StatelessWidget {
     final cutoff = DateTime.now().subtract(const Duration(hours: 24));
     final past24 = entries.where((e) => e.timestamp.isAfter(cutoff)).toList();
 
-    double feedingMl = 0;
-    for (final e in past24.where((e) => e.type == LogType.feeding)) {
-      final amt = e.data['amount_ml'];
-      if (amt != null) feedingMl += (amt as num).toDouble();
-    }
+    final feedingCount =
+        past24.where((e) => e.type == LogType.feeding).length;
 
     final nappyCount = past24.where((e) => e.type == LogType.nappy).length;
 
@@ -624,7 +621,7 @@ class _StatCards extends StatelessWidget {
               child: _StatCard(
                 icon: Icons.local_cafe,
                 label: 'Feeding',
-                value: feedingMl > 0 ? '${feedingMl.toInt()} ml' : '—',
+                value: feedingCount > 0 ? '$feedingCount times' : '—',
               ),
             ),
             const SizedBox(width: 8),

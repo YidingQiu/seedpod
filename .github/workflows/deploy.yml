@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build web
+        run: flutter build web --release --base-href /seedpod/
+
+      - name: Prepare docs
+        run: |
+          rm -rf docs
+          cp -r build/web docs
+          touch docs/.nojekyll
+          mkdir -p docs/solid
+          cp solid/client-profile.jsonld docs/solid/
+          cp solid/redirect.html docs/solid/
+
+      - name: Commit and push docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          git diff --staged --quiet || git commit -m "deploy: auto-build web [skip ci]"
+          git push

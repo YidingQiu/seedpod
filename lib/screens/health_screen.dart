@@ -17,11 +17,48 @@ class HealthScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final profile = state.selectedBaby;
+    final prefs = state.modulePrefs;
     final canGoBack = Navigator.of(context).canPop();
 
+    final tabLabels = <String>[];
+    final tabWidgets = <Widget>[];
+    if (prefs.isEnabled('growth')) {
+      tabLabels.add('Growth');
+      tabWidgets.add(_GrowthTab(state: state));
+    }
+    if (prefs.isEnabled('vaccines')) {
+      tabLabels.add('Vaccines');
+      tabWidgets.add(_VaccineTab(ageInDays: profile?.age.inDays ?? 0));
+    }
+    if (prefs.isEnabled('feeding')) {
+      tabLabels.add('Feeding');
+      tabWidgets.add(_FeedingTab(state: state));
+    }
+
+    if (tabLabels.isEmpty) {
+      return Scaffold(
+        backgroundColor: colorBg,
+        appBar: canGoBack
+            ? AppBar(title: const Text('Health'))
+            : null,
+        body: Center(
+          child: Text(
+            'Enable Growth, Vaccines or Feeding\nin the Modules screen to see health data.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: colorSecondary),
+          ),
+        ),
+      );
+    }
+
+    final clampedIndex = initialTabIndex.clamp(0, tabLabels.length - 1);
+
     return DefaultTabController(
-      length: 3,
-      initialIndex: initialTabIndex,
+      length: tabLabels.length,
+      initialIndex: clampedIndex,
       child: Scaffold(
         backgroundColor: colorBg,
         appBar: AppBar(
@@ -37,26 +74,14 @@ class HealthScreen extends StatelessWidget {
                 )
               : null,
           title: canGoBack ? const Text('Health') : null,
-          bottom: const TabBar(
+          bottom: TabBar(
             labelColor: colorPrimary,
             unselectedLabelColor: colorSecondary,
             indicatorColor: colorPrimary,
-            tabs: [
-              Tab(text: 'Growth'),
-              Tab(text: 'Vaccines'),
-              Tab(text: 'Feeding'),
-            ],
+            tabs: [for (final label in tabLabels) Tab(text: label)],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _GrowthTab(state: state),
-            _VaccineTab(
-              ageInDays: profile?.age.inDays ?? 0,
-            ),
-            _FeedingTab(state: state),
-          ],
-        ),
+        body: TabBarView(children: tabWidgets),
       ),
     );
   }

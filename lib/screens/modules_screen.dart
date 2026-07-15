@@ -36,10 +36,9 @@ class ModulesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final prefs = context.watch<AppState>().modulePrefs;
-    final optional = ModulePrefs.allModules.where((m) => !m.isCore).toList();
 
     final categories = <String, List<SeedPodModule>>{};
-    for (final m in optional) {
+    for (final m in ModulePrefs.allModules) {
       categories.putIfAbsent(m.category, () => []).add(m);
     }
 
@@ -59,22 +58,11 @@ class ModulesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Core modules (read-only)
-            _SectionHeader('Core — Always On'),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: ModulePrefs.allModules
-                  .where((m) => m.isCore)
-                  .map((m) => _CoreChip(m.title))
-                  .toList(),
-            ),
-            const SizedBox(height: 24),
-
-            // Optional module categories
+            // All categories including core
             for (final category in categories.keys) ...[
-              _SectionHeader(category),
+              _SectionHeader(
+                category == 'core' ? 'Core' : category,
+              ),
               const SizedBox(height: 10),
               ...categories[category]!.map((m) {
                 final enabled = prefs.isEnabled(m.id);
@@ -165,38 +153,6 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 8),
         const Expanded(child: Divider(color: colorDivider)),
       ],
-    );
-  }
-}
-
-class _CoreChip extends StatelessWidget {
-  final String label;
-  const _CoreChip(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorPrimary.withOpacity(0.1),
-        border: Border.all(color: colorPrimary.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.lock, size: 12, color: colorPrimary),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              color: colorPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

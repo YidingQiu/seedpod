@@ -177,19 +177,16 @@ class ModulePrefs {
   };
 
   static const Set<String> _defaultEnabled = {
-    'nappy',
-    'childcare',
-    'birth_admin',
-    'health',
+    'feeding', 'sleep', 'growth', 'vaccines', 'milestone',
+    'nappy', 'childcare', 'birth_admin', 'health',
   };
 
   static ModulePrefs get defaults =>
       ModulePrefs._(Set<String>.from(_defaultEnabled));
 
-  bool isEnabled(String id) => _coreIds.contains(id) || _enabled.contains(id);
+  bool isEnabled(String id) => _enabled.contains(id);
 
   ModulePrefs toggle(String id) {
-    if (_coreIds.contains(id)) return this;
     final next = Set<String>.from(_enabled);
     if (next.contains(id)) {
       next.remove(id);
@@ -203,7 +200,11 @@ class ModulePrefs {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getStringList('module_enabled');
     if (saved == null) return defaults;
-    return ModulePrefs._(Set<String>.from(saved));
+    final set = Set<String>.from(saved);
+    // Migration: existing users had cores always-on and never stored in prefs.
+    // If none of the core IDs are present, add them all so nothing disappears.
+    if (set.intersection(_coreIds).isEmpty) set.addAll(_coreIds);
+    return ModulePrefs._(set);
   }
 
   Future<void> saveToPrefs() async {

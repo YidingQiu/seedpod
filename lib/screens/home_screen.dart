@@ -499,8 +499,11 @@ class _QuickLogPanelState extends State<_QuickLogPanel> {
     final prefs = context.watch<AppState>().modulePrefs;
     final all =
         logTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
-    final pinned =
-        logTypeOptions.where((o) => _pinnedTypes.contains(o.type)).toList();
+    final pinned = logTypeOptions
+        .where(
+          (o) => _pinnedTypes.contains(o.type) && prefs.isEnabled(o.moduleId),
+        )
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

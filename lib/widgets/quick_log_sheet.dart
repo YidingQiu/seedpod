@@ -7,6 +7,7 @@ import 'package:solidui/solidui.dart';
 
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/log_entry.dart';
+import 'package:seedpod/models/log_type_option.dart';
 import 'package:seedpod/providers/app_state.dart';
 
 class QuickLogSheet extends StatefulWidget {
@@ -78,25 +79,6 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
     _feedingDurationController.dispose();
     super.dispose();
   }
-
-  static const List<_LogTypeOption> _allTypeOptions = [
-    // Core
-    _LogTypeOption(LogType.growth, Icons.straighten, 'Growth', 'growth'),
-    _LogTypeOption(LogType.sleep, Icons.bedtime, 'Sleep', 'sleep'),
-    _LogTypeOption(LogType.feeding, Icons.local_cafe, 'Feeding', 'feeding'),
-    _LogTypeOption(LogType.milestone, Icons.star, 'Milestone', 'milestone'),
-    // Optional
-    _LogTypeOption(LogType.nappy, Icons.baby_changing_station, 'Nappy', 'nappy'),
-    _LogTypeOption(LogType.food, Icons.restaurant, 'Food', 'food'),
-    _LogTypeOption(LogType.medication, Icons.medication, 'Meds', 'medication'),
-    _LogTypeOption(LogType.appointment, Icons.local_hospital, 'Doctor', 'appointment'),
-    _LogTypeOption(LogType.health, Icons.favorite, 'Health', 'health'),
-    _LogTypeOption(LogType.teeth, Icons.mood, 'Teeth', 'teeth'),
-    _LogTypeOption(LogType.memory, Icons.auto_stories, 'Memory', 'memory'),
-    _LogTypeOption(LogType.sleep_training, Icons.nightlight, 'Sleep Trng', 'sleep_training'),
-    _LogTypeOption(LogType.environment, Icons.wb_sunny, 'Weather', 'environment'),
-    _LogTypeOption(LogType.note, Icons.edit_note, 'Note', 'milestone'),
-  ];
 
   Future<void> _save() async {
     if (_selectedType == null) return;
@@ -318,11 +300,12 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
 
   Widget _buildTypeGrid() {
     final prefs = context.read<AppState>().modulePrefs;
-    final visible = _allTypeOptions
-        .where((o) => prefs.isEnabled(o.moduleId))
-        .toList();
+    final visible = widget.initialType != null
+        ? logTypeOptions.where((o) => o.type == widget.initialType).toList()
+        : logTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
     return GridView.count(
-      crossAxisCount: 4,
+      crossAxisCount: 5,
+      childAspectRatio: 2.25,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
@@ -732,17 +715,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
   }
 }
 
-class _LogTypeOption {
-  final LogType type;
-  final IconData icon;
-  final String label;
-  final String moduleId;
-
-  const _LogTypeOption(this.type, this.icon, this.label, this.moduleId);
-}
-
 class _TypeTile extends StatelessWidget {
-  final _LogTypeOption option;
+  final LogTypeOption option;
   final bool selected;
   final VoidCallback onTap;
 

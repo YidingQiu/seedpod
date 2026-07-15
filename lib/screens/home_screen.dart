@@ -7,6 +7,7 @@ import 'package:solidpod/solidpod.dart';
 import 'package:seedpod/constants/theme.dart';
 import 'package:seedpod/models/baby_profile.dart';
 import 'package:seedpod/models/log_entry.dart';
+import 'package:seedpod/models/log_type_option.dart';
 import 'package:seedpod/providers/app_state.dart';
 import 'package:seedpod/screens/onboarding_screen.dart';
 import 'package:seedpod/widgets/quick_log_sheet.dart';
@@ -300,22 +301,19 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final prefs = context.watch<AppState>().modulePrefs;
+    final actions =
+        logTypeOptions.where((o) => prefs.isEnabled(o.moduleId)).toList();
+    if (actions.isEmpty) return const SizedBox.shrink();
+    return GridView.count(
+      crossAxisCount: 5,
+      childAspectRatio: 2.75,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
       children: [
-        Expanded(
-            child:
-                _ActionChip(Icons.straighten, 'Growth', LogType.growth, onLog)),
-        const SizedBox(width: 8),
-        Expanded(
-            child: _ActionChip(Icons.bedtime, 'Sleep', LogType.sleep, onLog)),
-        const SizedBox(width: 8),
-        Expanded(
-            child: _ActionChip(
-                Icons.local_cafe, 'Feeding', LogType.feeding, onLog)),
-        const SizedBox(width: 8),
-        Expanded(
-            child:
-                _ActionChip(Icons.star, 'Milestone', LogType.milestone, onLog)),
+        for (final o in actions) _ActionChip(o.icon, o.label, o.type, onLog),
       ],
     );
   }

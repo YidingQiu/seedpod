@@ -10,7 +10,9 @@ import 'package:seedpod/models/log_entry.dart';
 import 'package:seedpod/providers/app_state.dart';
 
 class QuickLogSheet extends StatefulWidget {
-  const QuickLogSheet({super.key});
+  final LogType? initialType;
+  
+  const QuickLogSheet({super.key, this.initialType});
 
   @override
   State<QuickLogSheet> createState() => _QuickLogSheetState();
@@ -19,6 +21,12 @@ class QuickLogSheet extends StatefulWidget {
 class _QuickLogSheetState extends State<QuickLogSheet> {
   LogType? _selectedType;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedType = widget.initialType;
+  }
 
   final _titleController = TextEditingController();
   final _noteController = TextEditingController();

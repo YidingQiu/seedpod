@@ -81,9 +81,9 @@ class ModulesScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: colorCard,
+                color: context.aCard,
                 border:
-                    Border.all(color: colorDivider, style: BorderStyle.solid),
+                    Border.all(color: context.aDivider, style: BorderStyle.solid),
                 borderRadius: BorderRadius.circular(radiusMedium),
               ),
               child: Row(
@@ -172,9 +172,9 @@ class _ModuleCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: colorCard,
+        color: context.aCard,
         border: Border.all(
-          color: enabled ? colorPrimary.withOpacity(0.3) : colorDivider,
+          color: enabled ? colorPrimary.withOpacity(0.3) : context.aDivider,
         ),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
@@ -187,7 +187,7 @@ class _ModuleCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: enabled ? colorText : colorSecondary,
+                color: enabled ? context.aText : colorSecondary,
               ),
             ),
             const SizedBox(width: 8),

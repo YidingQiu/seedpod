@@ -291,10 +291,10 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       minChildSize: 0.4,
       expand: false,
       builder: (context, scroll) => Container(
-        decoration: const BoxDecoration(
-          color: colorBg,
+        decoration: BoxDecoration(
+          color: context.aBg,
           borderRadius:
-              BorderRadius.vertical(top: Radius.circular(radiusLarge)),
+              const BorderRadius.vertical(top: Radius.circular(radiusLarge)),
         ),
         child: Column(
           children: [
@@ -404,8 +404,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: colorCard,
-              border: Border.all(color: colorDivider),
+              color: context.aCard,
+              border: Border.all(color: context.aDivider),
               borderRadius: BorderRadius.circular(radiusMedium),
             ),
             child: Row(
@@ -841,8 +841,8 @@ class _QuickLogSheetState extends State<QuickLogSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: colorCard,
-          border: Border.all(color: colorDivider),
+          color: context.aCard,
+          border: Border.all(color: context.aDivider),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: Row(
@@ -884,9 +884,9 @@ class _TypeTile extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: selected ? colorPrimary : colorCard,
+          color: selected ? colorPrimary : context.aCard,
           border: Border.all(
-            color: selected ? colorPrimary : colorDivider,
+            color: selected ? colorPrimary : context.aDivider,
           ),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
@@ -902,7 +902,7 @@ class _TypeTile extends StatelessWidget {
             Text(
               option.label,
               style: TextStyle(
-                color: selected ? Colors.white : colorText,
+                color: selected ? Colors.white : context.aText,
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
               ),

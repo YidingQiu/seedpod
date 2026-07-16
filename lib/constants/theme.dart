@@ -20,6 +20,17 @@ const Color colorTextDark = Color(0xFFE8EDE9);
 const Color colorSecondaryDark = Color(0xFF8FA68F);
 const Color colorDividerDark = Color(0xFF2D3830);
 
+/// Use these on a [BuildContext] instead of the raw color constants when the
+/// color needs to adapt to the current theme brightness.
+extension AdaptiveColors on BuildContext {
+  bool get _dark => Theme.of(this).brightness == Brightness.dark;
+  Color get aCard => _dark ? colorCardDark : colorCard;
+  Color get aBg => _dark ? colorBgDark : colorBg;
+  Color get aDivider => _dark ? colorDividerDark : colorDivider;
+  Color get aText => _dark ? colorTextDark : colorText;
+  Color get aSecondary => _dark ? colorSecondaryDark : colorSecondary;
+}
+
 const double radiusSmall = 8.0;
 const double radiusMedium = 16.0;
 const double radiusLarge = 24.0;

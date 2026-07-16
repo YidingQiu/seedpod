@@ -240,7 +240,7 @@ class _VaccinationRemindersCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colorCard,
+          color: context.aCard,
           border: Border.all(color: colorPrimary.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
@@ -559,8 +559,8 @@ class _QuickLogPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(radiusMedium),
               child: Container(
                 decoration: BoxDecoration(
-                  color: colorCard,
-                  border: Border.all(color: colorDivider),
+                  color: context.aCard,
+                  border: Border.all(color: context.aDivider),
                   borderRadius: BorderRadius.circular(radiusMedium),
                 ),
                 child: const Column(
@@ -596,8 +596,8 @@ class _LogTypeTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(radiusMedium),
       child: Container(
         decoration: BoxDecoration(
-          color: colorCard,
-          border: Border.all(color: colorDivider),
+          color: context.aCard,
+          border: Border.all(color: context.aDivider),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: Column(
@@ -607,7 +607,7 @@ class _LogTypeTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               option.label,
-              style: const TextStyle(fontSize: 10, color: colorText),
+              style: TextStyle(fontSize: 10, color: context.aText),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -718,8 +718,8 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
-        color: colorCard,
-        border: Border.all(color: colorDivider),
+        color: context.aCard,
+        border: Border.all(color: context.aDivider),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -728,10 +728,10 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: colorText,
+              color: context.aText,
             ),
           ),
           const SizedBox(height: 4),
@@ -800,8 +800,8 @@ class _RecentLogFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: colorCard,
-        border: Border.all(color: colorDivider),
+        color: context.aCard,
+        border: Border.all(color: context.aDivider),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Row(

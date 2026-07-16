@@ -109,8 +109,11 @@ class LogEntry {
 
   static const String allEntriesFileName = 'log_entries.json.enc.ttl';
   static const String logsDirectory = 'logs';
+  // v2 path — each type lives in its own Solid container so it gets its own ACL.
   static String fileNameForType(LogType type) =>
-      '$logsDirectory/${type.name}.json.enc.ttl';
+      '$logsDirectory/${type.name}/data.json.enc.ttl';
+  static String dirNameForType(LogType type) =>
+      '$logsDirectory/${type.name}';
 
   static List<LogEntry> listFromJsonString(String s) {
     try {

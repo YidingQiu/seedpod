@@ -117,17 +117,45 @@ class PodService {
     final entries = <LogEntry>[];
     final seenIds = <String>{};
 
-    // Read per-type files.
+    // Read per-type files (v2: logs/{type}/data.json.enc.ttl).
     for (final type in LogType.values) {
+      bool v2Found = false;
       try {
         final content = await readPod(LogEntry.fileNameForType(type));
         for (final e in LogEntry.listFromJsonString(content)) {
           if (seenIds.add(e.id)) entries.add(e);
         }
+        v2Found = true;
       } on ResourceNotExistException {
-        // no entries of this type yet
+        // no v2 file yet — try v1 below
       } catch (e) {
-        debugPrint('readAllLogEntries(${type.name}) error: $e');
+        debugPrint('readAllLogEntries(${type.name}) v2 error: $e');
+        v2Found = true; // skip v1 if v2 errored for another reason
+      }
+
+      if (!v2Found) {
+        // Migrate v1 path (logs/{type}.json.enc.ttl) → v2 subdirectory.
+        try {
+          final v1Path = '${LogEntry.logsDirectory}/${type.name}.json.enc.ttl';
+          final content = await readPod(v1Path);
+          final v1Entries = LogEntry.listFromJsonString(content);
+          if (v1Entries.isNotEmpty) {
+            await writePod(
+              LogEntry.fileNameForType(type),
+              LogEntry.listToJsonString(v1Entries),
+              encrypted: true,
+              overwrite: true,
+            );
+            for (final e in v1Entries) {
+              if (seenIds.add(e.id)) entries.add(e);
+            }
+            debugPrint('PodService: migrated ${type.name} v1→v2');
+          }
+        } on ResourceNotExistException {
+          // no data for this type yet
+        } catch (e) {
+          debugPrint('readAllLogEntries(${type.name}) v1 error: $e');
+        }
       }
     }
 

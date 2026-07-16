@@ -115,19 +115,20 @@ class _ShareScreenState extends State<ShareScreen> {
     try {
       final dataPath = await getDataDirPath();
 
-      // Per-type log files
+      // Per-type log containers — each type lives in its own subdirectory so
+      // it has its own Solid ACL file (containers always get their own ACL).
       final logItems = <_ResourceItem>[];
       for (final entry in _logTypeInfo.entries) {
         final type = entry.key;
         final (icon, desc) = entry.value;
-        final url = await getFileUrl(
-          '$dataPath/${LogEntry.fileNameForType(type)}',
+        final dirUrl = await getDirUrl(
+          '$dataPath/${LogEntry.dirNameForType(type)}',
         );
         logItems.add(_ResourceItem(
           label: type.label,
           description: desc,
           icon: icon,
-          url: url,
+          url: dirUrl,
         ));
       }
 
@@ -224,8 +225,8 @@ class _ShareScreenState extends State<ShareScreen> {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colorCard,
-          border: Border.all(color: colorDivider),
+          color: context.aCard,
+          border: Border.all(color: context.aDivider),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: Text(
@@ -252,8 +253,8 @@ class _ShareScreenState extends State<ShareScreen> {
         // Tree
         Container(
           decoration: BoxDecoration(
-            color: colorCard,
-            border: Border.all(color: colorDivider),
+            color: context.aCard,
+            border: Border.all(color: context.aDivider),
             borderRadius: BorderRadius.circular(radiusMedium),
           ),
           child: Column(
@@ -315,11 +316,14 @@ class _ShareScreenState extends State<ShareScreen> {
             label: const Text('Change selection'),
           ),
           const SizedBox(height: 8),
-          GrantPermissionUi(
-            key: _grantKey,
-            showAppBar: false,
-            resourceNames: _grantUrls,
-            titleData: _titleData,
+          SizedBox(
+            height: 520,
+            child: GrantPermissionUi(
+              key: _grantKey,
+              showAppBar: false,
+              resourceNames: _grantUrls,
+              titleData: _titleData,
+            ),
           ),
         ],
 
@@ -378,10 +382,10 @@ class _GroupTile extends StatelessWidget {
                     children: [
                       Text(
                         group.label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
-                          color: colorText,
+                          color: context.aText,
                         ),
                       ),
                       Text(
@@ -474,7 +478,7 @@ class _ItemTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: item.selected ? colorText : colorSecondary,
+                      color: item.selected ? context.aText : colorSecondary,
                     ),
                   ),
                   Text(
@@ -650,10 +654,10 @@ class _StepRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
-                      color: colorText)),
+                      color: context.aText)),
               Text(body,
                   style: const TextStyle(
                       color: colorSecondary, fontSize: 12, height: 1.4)),
@@ -676,21 +680,21 @@ class _YourWebIdCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorCard,
-        border: Border.all(color: colorDivider),
+        color: context.aCard,
+        border: Border.all(color: context.aDivider),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.badge_outlined, color: colorPrimary, size: 18),
-              SizedBox(width: 8),
+              const Icon(Icons.badge_outlined, color: colorPrimary, size: 18),
+              const SizedBox(width: 8),
               Text(
                 'Your WebID',
                 style: TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 14, color: colorText),
+                    fontWeight: FontWeight.w600, fontSize: 14, color: context.aText),
               ),
             ],
           ),
@@ -703,8 +707,8 @@ class _YourWebIdCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: colorBg,
-              border: Border.all(color: colorDivider),
+              color: context.aBg,
+              border: Border.all(color: context.aDivider),
               borderRadius: BorderRadius.circular(radiusSmall),
             ),
             child: Row(
@@ -712,8 +716,8 @@ class _YourWebIdCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     webId,
-                    style: const TextStyle(
-                        fontSize: 12, color: colorText, fontFamily: 'monospace'),
+                    style: TextStyle(
+                        fontSize: 12, color: context.aText, fontFamily: 'monospace'),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -756,7 +760,7 @@ class _AccessChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.aCard,
         border: Border.all(color: colorPrimary.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(20),
       ),

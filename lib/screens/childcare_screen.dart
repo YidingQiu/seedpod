@@ -202,8 +202,8 @@ class _EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: colorCard,
-        border: Border.all(color: colorDivider),
+        color: context.aCard,
+        border: Border.all(color: context.aDivider),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(
@@ -265,8 +265,8 @@ class _EntryCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: colorCard,
-        border: Border.all(color: colorDivider),
+        color: context.aCard,
+        border: Border.all(color: context.aDivider),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: InkWell(
@@ -498,10 +498,10 @@ class _ChildcareFormSheetState extends State<_ChildcareFormSheet> {
       minChildSize: 0.5,
       expand: false,
       builder: (ctx, scroll) => Container(
-        decoration: const BoxDecoration(
-          color: colorBg,
+        decoration: BoxDecoration(
+          color: ctx.aBg,
           borderRadius:
-              BorderRadius.vertical(top: Radius.circular(radiusLarge)),
+              const BorderRadius.vertical(top: Radius.circular(radiusLarge)),
         ),
         child: Column(
           children: [
@@ -728,8 +728,8 @@ class _DateTile extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
-              color: colorCard,
-              border: Border.all(color: colorDivider),
+              color: context.aCard,
+              border: Border.all(color: context.aDivider),
               borderRadius: BorderRadius.circular(radiusMedium),
             ),
             child: Row(
@@ -740,7 +740,7 @@ class _DateTile extends StatelessWidget {
                 Text(
                   date != null ? _fmt(date!) : (hint ?? ''),
                   style: TextStyle(
-                    color: date != null ? colorText : colorSecondary,
+                    color: date != null ? context.aText : colorSecondary,
                     fontSize: 14,
                   ),
                 ),

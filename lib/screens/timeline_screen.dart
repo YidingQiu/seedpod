@@ -258,8 +258,8 @@ class _TimelineItem extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: colorCard,
-                  border: Border.all(color: colorDivider),
+                  color: context.aCard,
+                  border: Border.all(color: context.aDivider),
                   borderRadius: BorderRadius.circular(radiusMedium),
                 ),
                 child: Column(

@@ -241,8 +241,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           vertical: 14,
                         ),
                         decoration: BoxDecoration(
-                          color: colorCard,
-                          border: Border.all(color: colorDivider),
+                          color: context.aCard,
+                          border: Border.all(color: context.aDivider),
                           borderRadius: BorderRadius.circular(radiusMedium),
                         ),
                         child: Row(
@@ -260,7 +260,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               style: TextStyle(
                                 color: _selectedDate == null
                                     ? colorSecondary
-                                    : colorText,
+                                    : context.aText,
                                 fontSize: 16,
                               ),
                             ),

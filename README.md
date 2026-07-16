@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1254" height="1254" alt="SeedPod logo" src="https://github.com/user-attachments/assets/4437e362-ef27-4a64-b4b0-a28c5e32aba7" />
+<img width="200" height="200" alt="SeedPod logo" src="https://github.com/user-attachments/assets/4437e362-ef27-4a64-b4b0-a28c5e32aba7" />
 <!-- logo placeholder — replace with final asset -->
 # SeedPod
 

@@ -95,6 +95,7 @@ class _ShareScreenState extends State<ShareScreen> {
     LogType.sleep_training: (Icons.nightlight, 'Sleep training'),
     LogType.memory: (Icons.auto_stories, 'Memories'),
     LogType.note: (Icons.edit_note, 'Notes'),
+    LogType.photo: (Icons.photo_camera_outlined, 'Photos'),
     LogType.environment: (Icons.wb_sunny, 'Environment'),
   };
 

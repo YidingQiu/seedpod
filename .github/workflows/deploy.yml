@@ -3,8 +3,13 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
-    paths-ignore:
-      - 'docs/**'
+    paths:
+      - 'lib/**'
+      - 'assets/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'web/**'
+      - 'solid/**'
   workflow_dispatch:
 
 jobs:

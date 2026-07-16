@@ -209,66 +209,78 @@ class QuickLogIo {
     return '"${value.replaceAll('"', '""')}"';
   }
 
-  /// A small RFC-4180 CSV reader: handles quoted fields, doubled quotes inside
-  /// quotes, and `\r\n` / `\n` / `\r` line endings.
+  /// An RFC-4180 CSV reader. A field is treated as quoted only when a double
+  /// quote is its *first* character; inside such a field `""` is a literal
+  /// quote and the field ends at a `"` followed by a comma, a line ending, or
+  /// end-of-input. In an unquoted field, double quotes are kept literally
+  /// (so `he said "hi"` round-trips unchanged). Handles `\r\n` / `\n` / `\r`.
   static List<List<String>> _parseCsv(String input) {
     final rows = <List<String>>[];
+    if (input.isEmpty) return rows;
+
+    final n = input.length;
     var row = <String>[];
-    final field = StringBuffer();
-    var inQuotes = false;
     var i = 0;
 
-    void endField() {
-      row.add(field.toString());
-      field.clear();
-    }
-
-    void endRow() {
-      endField();
-      rows.add(row);
-      row = <String>[];
-    }
-
-    while (i < input.length) {
-      final ch = input[i];
-
-      if (inQuotes) {
-        if (ch == '"') {
-          if (i + 1 < input.length && input[i + 1] == '"') {
+    while (true) {
+      // --- parse one field starting at i ---
+      final field = StringBuffer();
+      if (i < n && input[i] == '"') {
+        // Quoted field: quote is the first character.
+        i++; // consume opening quote
+        while (i < n) {
+          final ch = input[i];
+          if (ch == '"') {
+            if (i + 1 < n && input[i + 1] == '"') {
+              field.write('"'); // escaped quote
+              i += 2;
+              continue;
+            }
+            final next = i + 1 < n ? input[i + 1] : '';
+            if (next.isEmpty ||
+                next == ',' ||
+                next == '\n' ||
+                next == '\r') {
+              i++; // consume the closing quote
+              break;
+            }
+            // A stray quote not followed by a delimiter: keep it literally.
             field.write('"');
-            i += 2;
+            i++;
             continue;
           }
-          inQuotes = false;
+          field.write(ch);
           i++;
-          continue;
         }
-        field.write(ch);
-        i++;
-        continue;
-      }
-
-      if (ch == '"') {
-        inQuotes = true;
-        i++;
-      } else if (ch == ',') {
-        endField();
-        i++;
-      } else if (ch == '\r') {
-        if (i + 1 < input.length && input[i + 1] == '\n') i++;
-        endRow();
-        i++;
-      } else if (ch == '\n') {
-        endRow();
-        i++;
       } else {
-        field.write(ch);
-        i++;
+        // Unquoted field: quotes are ordinary characters.
+        while (i < n) {
+          final ch = input[i];
+          if (ch == ',' || ch == '\n' || ch == '\r') break;
+          field.write(ch);
+          i++;
+        }
       }
+      row.add(field.toString());
+
+      // --- handle the terminator (comma, line ending, or EOF) ---
+      if (i >= n) {
+        rows.add(row);
+        break;
+      }
+      final term = input[i];
+      if (term == ',') {
+        i++;
+        continue; // next field, same row
+      }
+      // line ending
+      if (term == '\r' && i + 1 < n && input[i + 1] == '\n') i++;
+      i++;
+      rows.add(row);
+      row = <String>[];
+      if (i >= n) break; // trailing newline: no extra empty row
     }
 
-    // Flush trailing field/row (files without a final newline).
-    if (field.isNotEmpty || row.isNotEmpty) endRow();
     return rows;
   }
 }

@@ -1,5 +1,5 @@
 name: seedpod
-description: Seedpod - manage files on your personal online data store (POD).
+description: "Your baby's private tracker. Every feed, nap, and milestone stored on your own Solid POD — owned by your family, not a company."
 publish_to: 'none'
 version: 1.0.0+1
 

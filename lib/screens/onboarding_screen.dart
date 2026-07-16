@@ -42,6 +42,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _selectedDate = widget.initialProfile!.dateOfBirth;
       _selectedGender = widget.initialProfile!.gender;
     }
+    _checkAlreadyLoggedIn();
+  }
+
+  Future<void> _checkAlreadyLoggedIn() async {
+    final webId = await getWebId();
+    if (webId != null && mounted) {
+      setState(() => _podCreated = true);
+    }
   }
 
   @override

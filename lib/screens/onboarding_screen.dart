@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:solidpod/solidpod.dart';
 import 'package:solidui/solidui.dart';
@@ -382,9 +383,34 @@ class _PodSetupCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             podCreated
-                ? 'Account created on $appServerUri. Enter the baby\'s WebID below.'
+                ? 'Account created. Enter the baby\'s WebID below.'
                 : 'Give your baby their own private Solid POD — a personal data store they\'ll own forever.',
             style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: appServerUri));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Server URL copied to clipboard'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.dns_outlined, size: 13, color: colorSecondary),
+                const SizedBox(width: 5),
+                Text(
+                  appServerUri,
+                  style: const TextStyle(fontSize: 12, color: colorSecondary),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.copy, size: 12, color: colorSecondary),
+              ],
+            ),
           ),
           if (!podCreated) ...[
             const SizedBox(height: 12),

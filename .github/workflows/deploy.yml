@@ -10,18 +10,23 @@ on:
       - 'pubspec.lock'
       - 'web/**'
       - 'solid/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: subosito/flutter-action@v2
         with:
@@ -34,19 +39,25 @@ jobs:
       - name: Build web
         run: flutter build web --release --base-href /seedpod/
 
-      - name: Prepare docs
+      - name: Add Solid files
         run: |
-          rm -rf docs
-          cp -r build/web docs
-          touch docs/.nojekyll
-          mkdir -p docs/solid
-          cp solid/client-profile.jsonld docs/solid/
-          cp solid/redirect.html docs/solid/
+          mkdir -p build/web/solid
+          cp solid/client-profile.jsonld build/web/solid/
+          cp solid/redirect.html build/web/solid/
+          touch build/web/.nojekyll
 
-      - name: Commit and push docs
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/
-          git diff --staged --quiet || git commit -m "deploy: auto-build web [skip ci]"
-          git push
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

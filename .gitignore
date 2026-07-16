@@ -50,3 +50,6 @@ app.*.map.json
 
 # For local dev only
 CLAUDE.md
+
+# Web build output — deployed via GitHub Actions, never committed manually
+/docs/

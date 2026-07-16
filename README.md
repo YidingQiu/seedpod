@@ -187,7 +187,7 @@ Status progresses through: `applied` → `waitlisted` → `offered` → `enrolle
 
 ### Import/Export Data
 
-One can import and export data in JSON, CSV (Comma Separatated Values) and a zipped folders of CSV files.
+One can import and export data in JSON, CSV (Comma Separatated Values) and a zipped folder of CSV files.
 
 #### Click on Menu Icon (3 dots)
 <img

@@ -185,6 +185,12 @@ The `data` map is typed per `LogType`. A sleep entry carries `start` and `end` I
 
 Status progresses through: `applied` → `waitlisted` → `offered` → `enrolled` / `declined`.
 
+### Import/Export Data
+
+One can import and export data in JSON, CSV (Comma Separatated Values) and a zipped folders of CSV files.
+
+For a zipped folder consisting of CSV files; it will prompt you to select for each CSV file what data it contains.
+
 ---
 
 ## Solid Sharing

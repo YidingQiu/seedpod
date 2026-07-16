@@ -186,8 +186,9 @@ class LogTransfer {
     }
   }
 
-  /// Imports a .zip of CSV files (as produced by [exportCsvZip]). Each entry's
-  /// log type is inferred from its filename; unrecognised files are skipped.
+  /// Imports a .zip of CSV files (as produced by [exportCsvZip]). Each CSV's
+  /// log type is confirmed by the user one file at a time (pre-selecting a
+  /// guess from the filename); a file can be skipped from its dialog.
   static Future<void> importCsvZip(BuildContext context, AppState state) async {
     final result = await FilePicker.pickFiles(
       dialogTitle: 'Import zipped CSV logs',
@@ -204,39 +205,58 @@ class LogTransfer {
       return;
     }
 
+    final Archive archive;
     try {
-      final archive = ZipDecoder().decodeBytes(bytes);
-      final all = <LogEntry>[];
-      var unmatched = 0;
-      for (final file in archive) {
-        if (!file.isFile || !file.name.toLowerCase().endsWith('.csv')) continue;
-        final type = _guessType(file.name);
-        if (type == null) {
-          unmatched++;
-          continue;
-        }
-        all.addAll(QuickLogIo.importCsv(type, utf8.decode(file.content)));
-      }
-
-      if (all.isEmpty) {
-        if (context.mounted) {
-          _snack(
-            context,
-            unmatched > 0
-                ? "Couldn't match any CSV files in the zip to a log type."
-                : 'No CSV entries found in the zip.',
-            error: unmatched > 0,
-          );
-        }
-        return;
-      }
-
-      final res = await state.importEntries(all);
-      if (context.mounted) _snackResult(context, res);
+      archive = ZipDecoder().decodeBytes(bytes);
     } catch (e) {
-      if (context.mounted) _snack(context, 'Import failed: $e', error: true);
+      if (context.mounted) {
+        _snack(context, 'Not a valid .zip file: $e', error: true);
+      }
+      return;
     }
+
+    final csvFiles = archive
+        .where((f) => f.isFile && f.name.toLowerCase().endsWith('.csv'))
+        .toList();
+    if (csvFiles.isEmpty) {
+      if (context.mounted) {
+        _snack(context, 'No .csv files found in the zip.', error: true);
+      }
+      return;
+    }
+
+    final all = <LogEntry>[];
+    var skipped = 0;
+    for (final file in csvFiles) {
+      if (!context.mounted) return;
+      final type = await _promptType(
+        context,
+        _guessType(file.name),
+        fileName: _baseName(file.name),
+      );
+      if (type == null) {
+        skipped++;
+        continue; // user skipped this file
+      }
+      try {
+        all.addAll(QuickLogIo.importCsv(type, utf8.decode(file.content)));
+      } on QuickLogFormatException {
+        skipped++;
+      }
+    }
+
+    if (all.isEmpty) {
+      if (context.mounted) {
+        _snack(context, 'No files imported from the zip.');
+      }
+      return;
+    }
+    final res = await state.importEntries(all);
+    if (context.mounted) _snackResult(context, res, skippedFiles: skipped);
   }
+
+  static String _baseName(String path) =>
+      path.split(RegExp(r'[/\\]')).last;
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -281,25 +301,34 @@ class LogTransfer {
     }
   }
 
-  /// Guesses a log type from a filename like `seedpod_growth.csv`.
+  /// Guesses a log type from a filename like `seedpod_growth.csv`. Longer type
+  /// names are tried first so e.g. `sleep_training` wins over `sleep`.
   static LogType? _guessType(String fileName) {
     final lower = fileName.toLowerCase();
-    for (final type in kCsvDataColumns.keys) {
+    final types = kCsvDataColumns.keys.toList()
+      ..sort((a, b) => b.name.length.compareTo(a.name.length));
+    for (final type in types) {
       if (lower.contains(type.name)) return type;
     }
     return null;
   }
 
-  /// Asks which log type a CSV file belongs to.
+  /// Asks which log type a CSV file belongs to. Returns null if dismissed or
+  /// skipped. When [fileName] is given it is shown in the title.
   static Future<LogType?> _promptType(
     BuildContext context,
-    LogType? initial,
-  ) {
+    LogType? initial, {
+    String? fileName,
+  }) {
     return showDialog<LogType>(
       context: context,
       builder: (dialogContext) {
         return SimpleDialog(
-          title: const Text('Which log type is this CSV?'),
+          title: Text(
+            fileName == null
+                ? 'Which log type is this CSV?'
+                : 'What does "$fileName" contain?',
+          ),
           children: [
             for (final type in kCsvDataColumns.keys)
               SimpleDialogOption(
@@ -315,13 +344,24 @@ class LogTransfer {
                   ],
                 ),
               ),
+            const Divider(),
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Skip this file'),
+            ),
           ],
         );
       },
     );
   }
 
-  static void _snackResult(BuildContext context, ImportResult result) {
+  static void _snackResult(
+    BuildContext context,
+    ImportResult result, {
+    int skippedFiles = 0,
+  }) {
+    final fileNote =
+        skippedFiles > 0 ? ' ($skippedFiles file(s) skipped)' : '';
     if (result.failed) {
       _snack(context, 'Import failed while saving to your POD.', error: true);
       return;
@@ -331,8 +371,8 @@ class LogTransfer {
         context,
         result.skipped > 0
             ? 'Nothing new — ${result.skipped} entr'
-                '${result.skipped == 1 ? 'y' : 'ies'} already existed.'
-            : 'No entries found to import.',
+                '${result.skipped == 1 ? 'y' : 'ies'} already existed.$fileNote'
+            : 'No entries found to import.$fileNote',
       );
       return;
     }
@@ -341,7 +381,7 @@ class LogTransfer {
     _snack(
       context,
       'Imported ${result.added} entr'
-      '${result.added == 1 ? 'y' : 'ies'}$skippedNote.',
+      '${result.added == 1 ? 'y' : 'ies'}$skippedNote.$fileNote',
     );
   }
 

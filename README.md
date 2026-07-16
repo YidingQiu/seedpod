@@ -189,21 +189,25 @@ Status progresses through: `applied` → `waitlisted` → `offered` → `enrolle
 
 One can import and export data in JSON, CSV (Comma Separatated Values) and a zipped folders of CSV files.
 
+##### Click on Menu Icon (3 dots)
 <img
     src="documentation/images/Location_of Import_Export_Menu.png"
     alt="Location of Import Export Menu; top right hand corner"
     width="400">
 
+##### Import/Export Menu Options
 <img
     src="documentation/images/Import_Export_Menu_Options.png"
     alt="Import/Export Menu Options"
     width="400">
 
+##### Select file
 <img
     src="documentation/images/Zipped_folder_selection.png"
     alt="Zipped folder selection"
     width="400">
 
+##### For a zipped folder of CSV files; select the data type the CSV corresponds to
 <img
     src="documentation/images/Select_CSV_type.png"
     alt="Select CSV type"

@@ -60,7 +60,7 @@ class HealthScreen extends StatelessWidget {
       initialIndex: clampedIndex,
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: colorCard,
+          backgroundColor: context.aCard,
           elevation: 0,
           toolbarHeight: canGoBack ? kToolbarHeight : 0,
           automaticallyImplyLeading: false,
@@ -450,7 +450,7 @@ class _MeasurementRow extends StatelessWidget {
     final style = isHeader
         ? const TextStyle(
             color: colorSecondary, fontSize: 12, fontWeight: FontWeight.w600)
-        : const TextStyle(color: colorText, fontSize: 14);
+        : TextStyle(color: context.aText, fontSize: 14);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -489,14 +489,14 @@ class _VaccineTab extends StatelessWidget {
               border: Border.all(color: colorAccent.withOpacity(0.3)),
               borderRadius: BorderRadius.circular(radiusMedium),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.info_outline, color: colorAccent, size: 18),
-                SizedBox(width: 8),
+                const Icon(Icons.info_outline, color: colorAccent, size: 18),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'ACT NIP Schedule (Feb 2025). ACT-funded MenB (Bexsero) is in addition to the national program. Always confirm with your GP or immunisation nurse.',
-                    style: TextStyle(color: colorText, fontSize: 13),
+                    style: TextStyle(color: context.aText, fontSize: 13),
                   ),
                 ),
               ],
@@ -577,9 +577,9 @@ class _MilestoneCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: colorCard,
+        color: context.aCard,
         border: Border.all(
-          color: allDone ? colorPrimary.withOpacity(0.35) : colorDivider,
+          color: allDone ? colorPrimary.withOpacity(0.35) : context.aDivider,
         ),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
@@ -675,7 +675,7 @@ class _VaccineRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: checked ? colorPrimary : colorText,
+                color: checked ? colorPrimary : context.aText,
               ),
             ),
           ),
@@ -850,8 +850,8 @@ class _StatBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: colorBg,
-          border: Border.all(color: colorDivider),
+          color: context.aBg,
+          border: Border.all(color: context.aDivider),
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
         child: Column(
@@ -860,10 +860,10 @@ class _StatBox extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: colorText,
+                color: context.aText,
               ),
             ),
             Text(
@@ -981,8 +981,8 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorCard,
-        border: Border.all(color: colorDivider),
+        color: context.aCard,
+        border: Border.all(color: context.aDivider),
         borderRadius: BorderRadius.circular(radiusMedium),
       ),
       child: Column(

@@ -2,6 +2,7 @@ library;
 
 import 'dart:convert';
 
+import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -114,6 +115,39 @@ class LogTransfer {
     }
   }
 
+  /// Exports one CSV file per log type, bundled into a single .zip archive.
+  static Future<void> exportCsvZip(
+    BuildContext context,
+    List<LogEntry> entries,
+  ) async {
+    final tables = QuickLogIo.exportAllCsv(entries);
+    if (tables.isEmpty) {
+      _snack(context, 'No log entries to export.');
+      return;
+    }
+    try {
+      final archive = Archive();
+      for (final table in tables.entries) {
+        archive.add(ArchiveFile.string('seedpod_${table.key}.csv', table.value));
+      }
+      final zipBytes = ZipEncoder().encode(archive);
+      final path = await FilePicker.saveFile(
+        dialogTitle: 'Export logs as zipped CSV',
+        fileName: 'seedpod_logs_csv.zip',
+        type: FileType.custom,
+        allowedExtensions: const ['zip'],
+        bytes: Uint8List.fromList(zipBytes),
+      );
+      if (path == null) return; // cancelled
+      if (_isDesktop) await writeBytesToPath(path, zipBytes);
+      if (!context.mounted) return;
+      _snack(context, 'Exported ${tables.length} CSV file(s) as a zip.');
+    } catch (e) {
+      if (!context.mounted) return;
+      _snack(context, 'Export failed: $e', error: true);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Import
   // ---------------------------------------------------------------------------
@@ -149,6 +183,58 @@ class LogTransfer {
       if (context.mounted) _snackResult(context, result);
     } on QuickLogFormatException catch (e) {
       if (context.mounted) _snack(context, e.message, error: true);
+    }
+  }
+
+  /// Imports a .zip of CSV files (as produced by [exportCsvZip]). Each entry's
+  /// log type is inferred from its filename; unrecognised files are skipped.
+  static Future<void> importCsvZip(BuildContext context, AppState state) async {
+    final result = await FilePicker.pickFiles(
+      dialogTitle: 'Import zipped CSV logs',
+      type: FileType.custom,
+      allowedExtensions: const ['zip'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final bytes = result.files.first.bytes;
+    if (bytes == null) {
+      if (context.mounted) {
+        _snack(context, 'Could not read the selected file.', error: true);
+      }
+      return;
+    }
+
+    try {
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final all = <LogEntry>[];
+      var unmatched = 0;
+      for (final file in archive) {
+        if (!file.isFile || !file.name.toLowerCase().endsWith('.csv')) continue;
+        final type = _guessType(file.name);
+        if (type == null) {
+          unmatched++;
+          continue;
+        }
+        all.addAll(QuickLogIo.importCsv(type, utf8.decode(file.content)));
+      }
+
+      if (all.isEmpty) {
+        if (context.mounted) {
+          _snack(
+            context,
+            unmatched > 0
+                ? "Couldn't match any CSV files in the zip to a log type."
+                : 'No CSV entries found in the zip.',
+            error: unmatched > 0,
+          );
+        }
+        return;
+      }
+
+      final res = await state.importEntries(all);
+      if (context.mounted) _snackResult(context, res);
+    } catch (e) {
+      if (context.mounted) _snack(context, 'Import failed: $e', error: true);
     }
   }
 

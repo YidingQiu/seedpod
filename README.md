@@ -190,7 +190,7 @@ Status progresses through: `applied` → `waitlisted` → `offered` → `enrolle
 One can import and export data in JSON, CSV (Comma Separatated Values) and a zipped folders of CSV files.
 
 <img
-    src="documentation/images/Location_of_Import_Export_Menu.png"
+    src="documentation/images/Location_of Import_Export_Menu.png"
     alt="Location of Import Export Menu; top right hand corner"
     width="400">
 

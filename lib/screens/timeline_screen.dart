@@ -373,19 +373,36 @@ class _TimelineItem extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(entry.type.label),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final kv in entry.data.entries)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  '${_prettify(kv.key)}: ${kv.value}',
-                  style: const TextStyle(fontSize: 14),
+        content: SingleChildScrollView(
+          child: Table(
+            columnWidths: const {
+              0: IntrinsicColumnWidth(),
+              1: FlexColumnWidth(),
+            },
+            defaultVerticalAlignment: TableCellVerticalAlignment.top,
+            children: [
+              for (final kv in entry.data.entries)
+                TableRow(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8, bottom: 4),
+                      child: Text(
+                        '${_prettify(kv.key)}:',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        _formatValue(kv.key, kv.value),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -397,8 +414,54 @@ class _TimelineItem extends StatelessWidget {
     );
   }
 
-  String _prettify(String key) => key.replaceAll('_', ' ').replaceFirstMapped(
-        RegExp(r'^.'),
-        (m) => m.group(0)!.toUpperCase(),
-      );
+  // Trailing key segments treated as units, appended to the value instead of
+  // the label (e.g. duration_min -> label "Duration", value "15 min").
+  static const Set<String> _units = {'kg', 'cm', 'ml', 'min'};
+
+  String? _unitOf(String key) {
+    final parts = key.split('_');
+    if (parts.length > 1 && _units.contains(parts.last)) return parts.last;
+    return null;
+  }
+
+  String _prettify(String key) {
+    final parts = key.split('_');
+    if (parts.length > 1 && _units.contains(parts.last)) parts.removeLast();
+    final label = parts.join(' ');
+    return label.isEmpty ? label : label[0].toUpperCase() + label.substring(1);
+  }
+
+  // Matches an ISO-8601 date (optionally with a time), so plain numbers/text
+  // are never mistaken for dates.
+  static final RegExp _isoDateTime =
+      RegExp(r'^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2})?');
+
+  /// Formats ISO datetime values (e.g. sleep start/end) as
+  /// 'Wed 15 Jul 2026, 1:00 PM', appends units to numeric values
+  /// (e.g. '15 min'), and leaves everything else untouched.
+  String _formatValue(String key, Object? value) {
+    final s = value?.toString() ?? '';
+    if (s.isEmpty) return s;
+    if (_isoDateTime.hasMatch(s)) {
+      final dt = DateTime.tryParse(s);
+      if (dt != null) return _formatDateTime(dt);
+    }
+    final unit = _unitOf(key);
+    if (unit != null) return '$s $unit';
+    return s;
+  }
+
+  String _formatDateTime(DateTime dt) {
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final weekday = weekdays[dt.weekday - 1];
+    final month = months[dt.month - 1];
+    final hour12 = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final period = dt.hour < 12 ? 'AM' : 'PM';
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$weekday ${dt.day} $month ${dt.year}, $hour12:$minute $period';
+  }
 }

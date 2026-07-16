@@ -339,11 +339,9 @@ class _TimelineItem extends StatelessWidget {
         if (h.isNotEmpty) parts.add('${h}cm');
         return parts.isEmpty ? 'Growth recorded' : parts.join(' · ');
       case LogType.sleep:
-        final start = e.data['start'];
-        final end = e.data['end'];
-        if (start != null && end != null) {
-          final s = DateTime.parse(start.toString());
-          final en = DateTime.parse(end.toString());
+        final s = DateTime.tryParse(e.data['start']?.toString() ?? '');
+        final en = DateTime.tryParse(e.data['end']?.toString() ?? '');
+        if (s != null && en != null) {
           final dur = en.difference(s);
           return '${dur.inHours}h ${dur.inMinutes % 60}m sleep';
         }

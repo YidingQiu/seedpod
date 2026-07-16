@@ -199,18 +199,73 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _BabySelector(
-                babies: state.babies,
-                selectedBabyId: profile.id,
-                onSelected: state.selectBaby,
-                onAdd: _openAddBaby,
+              Row(
+                children: [
+                  Expanded(
+                    child: _BabySelector(
+                      babies: state.babies,
+                      selectedBabyId: profile.id,
+                      onSelected: state.selectBaby,
+                      onAdd: _openAddBaby,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    tooltip: 'Import / export data',
+                    onSelected: _onDataMenu,
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'export_json',
+                        child: ListTile(
+                          leading: Icon(Icons.file_download_outlined),
+                          title: Text('Export as JSON'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'export_csv',
+                        child: ListTile(
+                          leading: Icon(Icons.table_view_outlined),
+                          title: Text('Export as CSV'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'export_csv_zip',
+                        child: ListTile(
+                          leading: Icon(Icons.folder_zip_outlined),
+                          title: Text('Export as CSV (.zip)'),
+                        ),
+                      ),
+                      PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'import_json',
+                        child: ListTile(
+                          leading: Icon(Icons.file_upload_outlined),
+                          title: Text('Import from JSON'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'import_csv',
+                        child: ListTile(
+                          leading: Icon(Icons.upload_file_outlined),
+                          title: Text('Import from CSV'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'import_csv_zip',
+                        child: ListTile(
+                          leading: Icon(Icons.drive_folder_upload_outlined),
+                          title: Text('Import from CSV (.zip)'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               _BabyCard(
                 profile: profile,
                 onEdit: () => _openEditProfile(profile),
                 onDelete: () => _deleteBaby(profile),
-                onDataMenu: _onDataMenu,
               ),
               const SizedBox(height: 24),
               _StatCards(
@@ -380,13 +435,11 @@ class _BabyCard extends StatelessWidget {
   final BabyProfile profile;
   final VoidCallback onEdit;
   final Future<void> Function() onDelete;
-  final void Function(String action) onDataMenu;
 
   const _BabyCard({
     required this.profile,
     required this.onEdit,
     required this.onDelete,
-    required this.onDataMenu,
   });
 
   @override
@@ -441,56 +494,6 @@ class _BabyCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.white),
-                tooltip: 'Import / export data',
-                onSelected: onDataMenu,
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'export_json',
-                    child: ListTile(
-                      leading: Icon(Icons.file_download_outlined),
-                      title: Text('Export as JSON'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'export_csv',
-                    child: ListTile(
-                      leading: Icon(Icons.table_view_outlined),
-                      title: Text('Export as CSV'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'export_csv_zip',
-                    child: ListTile(
-                      leading: Icon(Icons.folder_zip_outlined),
-                      title: Text('Export as CSV (.zip)'),
-                    ),
-                  ),
-                  PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'import_json',
-                    child: ListTile(
-                      leading: Icon(Icons.file_upload_outlined),
-                      title: Text('Import from JSON'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'import_csv',
-                    child: ListTile(
-                      leading: Icon(Icons.upload_file_outlined),
-                      title: Text('Import from CSV'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'import_csv_zip',
-                    child: ListTile(
-                      leading: Icon(Icons.drive_folder_upload_outlined),
-                      title: Text('Import from CSV (.zip)'),
-                    ),
-                  ),
-                ],
-              ),
               IconButton(
                 onPressed: onEdit,
                 tooltip: 'Edit baby profile',
@@ -726,7 +729,7 @@ class _StatCards extends StatelessWidget {
           label: 'Feeding',
           value: feedingCount > 0 ? '$feedingCount times' : '—',
         ),
-      ));
+      ),);
     }
     if (modulePrefs.isEnabled('nappy')) {
       cards.add(Expanded(

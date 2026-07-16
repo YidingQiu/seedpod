@@ -1,5 +1,5 @@
 <div align="center">
-
+https://cdn.discordapp.com/attachments/1526729713072996555/1527047430191841422/ChatGPT_Image_Jul_16_2026_06_18_36_AM.png?ex=6a593d3e&is=6a57ebbe&hm=c11b3f57f300a96b62227e21c717bc892a0df5680ef5b6ef806133480df6640e&
 <!-- logo placeholder — replace with final asset -->
 # SeedPod
 
